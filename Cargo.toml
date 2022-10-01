@@ -5,4 +5,27 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-bevy = "0.8"
+bevy = { version = "0.8", features = [
+  "flac",
+  "jpeg",
+  "ktx2",
+  "png",
+  "vorbis",
+  "zstd",
+] }
+bevy_asset_loader = { version = "0.12", features = ["stageless"] }
+bevy_kira_audio = { version = "0.12", features = ["flac"] }
+bevy_egui = "0.16"
+bevy_rapier3d = "0.16"
+bevy-web-resizer = "3.0"
+bevy_editor_pls = "0.1"
+pathfinding = "3.0"
+bevy_mod_picking = "0.9"
+
+# Enable only a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3

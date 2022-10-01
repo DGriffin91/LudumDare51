@@ -21,6 +21,7 @@ bevy-web-resizer = "3.0"
 bevy_editor_pls = "0.1"
 pathfinding = "3.0"
 bevy_mod_picking = "0.9"
+bevy_mod_raycast = "0.6"
 
 # Enable only a small amount of optimization in debug mode
 [profile.dev]

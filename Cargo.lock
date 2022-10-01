@@ -557,6 +557,7 @@ dependencies = [
  "bevy_egui 0.16.1",
  "bevy_kira_audio",
  "bevy_mod_picking",
+ "bevy_mod_raycast",
  "bevy_rapier3d",
  "pathfinding",
 ]

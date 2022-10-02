@@ -58,25 +58,19 @@ fn ui_sidebar(
             }
             ui.label("--- UPGRADES ---");
             let cost = (player.blaster_upgrade.powi(2) * 10.0) as u64;
-            if ui.button(&format!("BLASTER {}", cost)).clicked() {
-                if player.credits > cost {
-                    player.blaster_upgrade *= 1.5;
-                    player.credits -= cost;
-                }
+            if ui.button(&format!("BLASTER {}", cost)).clicked() && player.credits > cost {
+                player.blaster_upgrade *= 1.5;
+                player.credits -= cost;
             }
             let cost = (player.wave_upgrade.powi(2) * 10.0) as u64;
-            if ui.button(&format!("WAVE {}", cost)).clicked() {
-                if player.credits > cost {
-                    player.wave_upgrade *= 1.5;
-                    player.credits -= cost;
-                }
+            if ui.button(&format!("WAVE {}", cost)).clicked() && player.credits > cost {
+                player.wave_upgrade *= 1.5;
+                player.credits -= cost;
             }
             let cost = (player.laser_upgrade.powi(2) * 10.0) as u64;
-            if ui.button(&format!("LASERS {}", cost)).clicked() {
-                if player.credits > cost {
-                    player.laser_upgrade *= 1.5;
-                    player.credits -= cost;
-                }
+            if ui.button(&format!("LASERS {}", cost)).clicked() && player.credits > cost {
+                player.laser_upgrade *= 1.5;
+                player.credits -= cost;
             }
         });
 }

@@ -17,8 +17,8 @@ use bevy_mod_raycast::RayCastMesh;
 use bevy_scene_hook::{HookPlugin, HookedSceneBundle, SceneHook};
 use board::GameBoard;
 use enemies::{
-    destroy_enemies, move_enemy_along_path, move_flying_enemy, spawn_enemy, spawn_flying_enemy,
-    update_board_has_enemy, update_enemy_paths,
+    destroy_enemies, move_enemy_along_path, move_flying_enemy, spawn_flying_enemy,
+    spawn_rolling_enemy, spawn_rolling_enemy2, update_board_has_enemy, update_enemy_paths,
 };
 use iyes_loopless::prelude::*;
 use player::{MyRaycastSet, PlayerPlugin};
@@ -86,7 +86,8 @@ fn main() {
             ConditionSet::new()
                 .run_in_state(GameState::RunLevel)
                 .label("pre")
-                .with_system(spawn_enemy)
+                .with_system(spawn_rolling_enemy)
+                .with_system(spawn_rolling_enemy2)
                 .with_system(update_enemy_paths)
                 .with_system(move_enemy_along_path)
                 .with_system(turret_fire)
@@ -134,13 +135,13 @@ fn setup(
     // light
     com.spawn_bundle(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            illuminance: 30000.0,
+            illuminance: 20000.0,
             //shadows_enabled: true,
-            color: Color::rgb(1.0, 0.95, 0.5),
+            color: Color::rgb(1.0, 1.0, 1.0),
             ..default()
         },
         transform: Transform::from_translation(vec3(0.0, 5.0, 0.0)).with_rotation(
-            Quat::from_euler(EulerRot::XYZ, TAU * 0.5, TAU * 0.125, TAU * 0.25),
+            Quat::from_euler(EulerRot::XYZ, TAU * 0.5, -TAU * 0.25, TAU * 0.25),
         ),
         ..default()
     });

@@ -23,6 +23,8 @@ pub struct ModelAssets {
 
     #[asset(path = "models/units/rolling_unit.glb#Scene0")]
     pub rolling_enemy: Handle<Scene>,
+    #[asset(path = "models/units/rolling_unit_2.glb#Scene0")]
+    pub rolling_enemy_2: Handle<Scene>,
     #[asset(path = "models/units/flying_unit.glb#Scene0")]
     pub flying_enemy: Handle<Scene>,
 

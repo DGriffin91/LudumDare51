@@ -24,7 +24,7 @@ pub struct FlyingEnemy {
     dest: Vec3,
 }
 
-pub fn spawn_enemy(
+pub fn spawn_rolling_enemy(
     time: Res<Time>,
     mut com: Commands,
     mut last_spawn: Local<f32>,
@@ -32,7 +32,7 @@ pub fn spawn_enemy(
     model_assets: Res<ModelAssets>,
 ) {
     let since_startup = time.seconds_since_startup() as f32;
-    if since_startup - *last_spawn > 1.0 {
+    if since_startup - *last_spawn > 3.0 {
         *last_spawn = since_startup;
         let mut ecmds = com.spawn();
 
@@ -53,6 +53,43 @@ pub fn spawn_enemy(
         ecmds.insert_bundle(HookedSceneBundle {
             scene: SceneBundle {
                 scene: model_assets.rolling_enemy.clone(),
+                transform: Transform::from_translation(b.ls_to_ws_vec3(b.start)),
+                ..default()
+            },
+            hook: SceneHook::new(move |_entity, _cmds| {}),
+        });
+    }
+}
+
+pub fn spawn_rolling_enemy2(
+    time: Res<Time>,
+    mut com: Commands,
+    mut last_spawn: Local<f32>,
+    b: Res<GameBoard>,
+    model_assets: Res<ModelAssets>,
+) {
+    let since_startup = time.seconds_since_startup() as f32;
+    if since_startup - *last_spawn > 2.0 {
+        *last_spawn = since_startup;
+        let mut ecmds = com.spawn();
+
+        ecmds
+            .insert(EnemyPath(None))
+            .insert(Health(0.7))
+            .insert(Enemy { speed: 3.0 });
+
+        basic_light(
+            &mut ecmds,
+            Color::rgb(1.0, 0.1, 0.3),
+            30.0,
+            2.0,
+            0.5,
+            vec3(0.0, 0.4, -0.5),
+        );
+
+        ecmds.insert_bundle(HookedSceneBundle {
+            scene: SceneBundle {
+                scene: model_assets.rolling_enemy_2.clone(),
                 transform: Transform::from_translation(b.ls_to_ws_vec3(b.start)),
                 ..default()
             },

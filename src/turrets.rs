@@ -427,7 +427,6 @@ pub fn progress_projectiles(
                 {
                     **health -= projectile.damage;
                     if **health < 0.0 {
-                        com.entity(enemy_entity).despawn_recursive();
                         let mut ecmds = com.spawn_bundle(SceneBundle {
                             scene: model_assets.disc.clone(),
                             transform: Transform::from_translation(

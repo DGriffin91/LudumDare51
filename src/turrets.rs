@@ -42,17 +42,56 @@ impl Turret {
         trans: Vec3,
         model_assets: &ModelAssets,
     ) -> (Turret, bevy::prelude::Entity) {
-        let mut entity = com.spawn_bundle(SceneBundle {
-            scene: model_assets.shockwave_turret.clone(),
-            transform: Transform::from_translation(trans),
-            ..Default::default()
-        });
-        entity
+        let mut ecmds = com.spawn();
+        let entity_id = ecmds.id();
+
+        ecmds
             .insert(AttackDamage(0.05))
             .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.5), true)))
-            .insert(Range(2.0))
+            .insert(Range(4.0))
             .insert(Turret::Shockwave);
-        (Turret::Shockwave, entity.id())
+        basic_light(
+            &mut ecmds,
+            Color::rgb(1.0, 0.2, 1.0),
+            200.0,
+            3.0,
+            0.75,
+            vec3(0.0, 0.6, 0.0),
+        );
+
+        ecmds.insert_bundle(HookedSceneBundle {
+            scene: SceneBundle {
+                scene: model_assets.shockwave_turret.clone(),
+                transform: Transform::from_translation(trans),
+                ..default()
+            },
+            hook: SceneHook::new(move |entity, cmds| {
+                if let Some(name) = entity.get::<Name>() {
+                    if name.contains("BobbleSphere") {
+                        cmds.insert(ShockwaveSphere {
+                            top_parent: entity_id.clone(),
+                            phase: 0.0,
+                        });
+                    }
+                    if name.contains("Top Cap") {
+                        cmds.insert(Cap {
+                            top_parent: entity_id.clone(),
+                            progress: 0.0,
+                            direction: Vec3::Y * 0.1,
+                        });
+                    }
+                    if name.contains("Bottom Cap") {
+                        cmds.insert(Cap {
+                            top_parent: entity_id.clone(),
+                            progress: 0.0,
+                            direction: -Vec3::Y * 0.1,
+                        });
+                    }
+                }
+            }),
+        });
+
+        (Turret::Shockwave, entity_id)
     }
 
     pub fn spawn_laser_turret(
@@ -100,11 +139,19 @@ impl Turret {
 pub fn turret_fire(
     mut com: Commands,
     time: Res<Time>,
-    mut turrets: Query<(&Transform, &AttackDamage, &Range, &mut Cooldown, &Turret)>,
+    mut turrets: Query<(
+        Entity,
+        &Transform,
+        &AttackDamage,
+        &Range,
+        &mut Cooldown,
+        &Turret,
+    )>,
     mut enemies: Query<(Entity, &Transform, &mut Health), With<Enemy>>,
     model_assets: Res<ModelAssets>,
+    mut caps: Query<&mut Cap>,
 ) {
-    for (turret_trans, damage, range, mut cooldown, turret) in turrets.iter_mut() {
+    for (turret_entity, turret_trans, damage, range, mut cooldown, turret) in turrets.iter_mut() {
         cooldown.tick(time.delta());
 
         let mut closest = None;
@@ -157,19 +204,35 @@ pub fn turret_fire(
                 }
                 Turret::Shockwave => {
                     for (_entity, enemy_trans, mut health) in enemies.iter_mut() {
-                        if enemy_trans.translation.distance(turret_trans.translation) < **range {
+                        let dist = enemy_trans.translation.distance(turret_trans.translation);
+                        if dist < **range {
+                            for mut cap in caps.iter_mut() {
+                                if cap.top_parent == turret_entity {
+                                    cap.progress = 1.0;
+                                }
+                            }
                             cooldown.reset();
-                            health.0 -= damage.0;
-                            com.spawn_bundle(SceneBundle {
+                            health.0 -= damage.0 * (1.0 / dist.max(1.0));
+                            let mut ecmds = com.spawn_bundle(SceneBundle {
                                 scene: model_assets.disc.clone(),
-                                transform: turret_trans.clone(),
+                                transform: Transform::from_translation(
+                                    turret_trans.translation + Vec3::Y * 0.5,
+                                ),
                                 ..Default::default()
-                            })
-                            .insert(DiscExplosion {
+                            });
+                            ecmds.insert(DiscExplosion {
                                 speed: 9.0,
                                 size: 4.0,
                                 progress: 0.0,
                             });
+                            basic_light(
+                                &mut ecmds,
+                                Color::rgb(1.0, 0.0, 1.0),
+                                500.0,
+                                4.5,
+                                1.0,
+                                Vec3::Y,
+                            );
                         }
                     }
                 }
@@ -231,7 +294,7 @@ pub fn laser_point_at_enemy(
 
                 //.rotation =
                 //    Quat::from_euler(EulerRot::XYZ, before.0, after.1, before.2);
-                //break;
+                break;
             }
         }
     }
@@ -294,6 +357,24 @@ pub fn progress_explosions(
     }
 }
 
+pub fn bobble_shockwave_spheres(
+    time: Res<Time>,
+    mut shockwave_spheres: Query<(&mut Transform, &mut ShockwaveSphere)>,
+) {
+    for (mut trans, mut sh) in shockwave_spheres.iter_mut() {
+        sh.phase += time.delta_seconds();
+        trans.translation = Vec3::Y * 0.7 + Vec3::Y * 0.2 * (sh.phase * 2.0).sin() as f32;
+    }
+}
+
+pub fn position_caps(time: Res<Time>, mut caps: Query<(&mut Transform, &mut Cap)>) {
+    let delta_sec = time.delta_seconds();
+    for (mut trans, mut cap) in caps.iter_mut() {
+        cap.progress = (cap.progress - delta_sec * 2.0).max(0.0);
+        trans.translation = cap.direction * cap.progress;
+    }
+}
+
 #[derive(Component)]
 pub struct Projectile {
     pub dir: Vec3,
@@ -316,4 +397,17 @@ pub struct DiscExplosion {
 #[derive(Component, Debug)]
 pub struct Swivel {
     top_parent: Entity,
+}
+
+#[derive(Component, Debug)]
+pub struct ShockwaveSphere {
+    top_parent: Entity,
+    phase: f32,
+}
+
+#[derive(Component, Debug)]
+pub struct Cap {
+    top_parent: Entity,
+    progress: f32,
+    direction: Vec3,
 }

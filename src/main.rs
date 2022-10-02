@@ -18,7 +18,10 @@ use board::GameBoard;
 use enemies::{destroy_enemies, spawn_enemy, update_board_has_enemy, EnemyPath};
 use iyes_loopless::prelude::*;
 use player::{MyRaycastSet, PlayerPlugin};
-use turrets::{laser_point_at_enemy, progress_explosions, progress_projectiles, turret_fire};
+use turrets::{
+    bobble_shockwave_spheres, laser_point_at_enemy, position_caps, progress_explosions,
+    progress_projectiles, turret_fire,
+};
 use ui::GameUI;
 pub mod assets;
 pub mod board;
@@ -87,6 +90,8 @@ fn main() {
                 .with_system(laser_point_at_enemy)
                 .with_system(progress_projectiles)
                 .with_system(progress_explosions)
+                .with_system(bobble_shockwave_spheres)
+                .with_system(position_caps)
                 .into(),
         );
 

@@ -258,6 +258,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy-scene-hook"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ec966eb90849b6c72b2d028e0bc8b82948d156bcf4bf7b37a0c28b1ec3ab623"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy-web-resizer"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -551,6 +560,7 @@ name = "bevy_github_ci_template"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy-scene-hook",
  "bevy-web-resizer",
  "bevy_asset_loader",
  "bevy_editor_pls",

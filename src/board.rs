@@ -1,7 +1,4 @@
-use bevy::{
-    math::{ivec2, vec3},
-    prelude::*,
-};
+use bevy::{math::*, prelude::*};
 use pathfinding::prelude::astar;
 
 use crate::turrets::Turret;
@@ -9,7 +6,7 @@ use crate::turrets::Turret;
 #[derive(Clone)]
 pub struct Cell {
     pub filled: bool,
-    pub turret: Option<Turret>,
+    pub turret: Option<(Turret, Entity)>,
 }
 
 impl Default for Cell {
@@ -25,6 +22,7 @@ pub struct GameBoard {
     pub size: [usize; 2],
     pub position: IVec2,
     pub board: Vec<Cell>,
+    pub has_enemy: Vec<bool>,
     pub start: IVec2,
     pub dest: IVec2,
 }
@@ -35,10 +33,15 @@ impl GameBoard {
         GameBoard {
             size,
             position,
+            has_enemy: vec![false; size[0] * size[1]],
             board,
             start,
             dest,
         }
+    }
+
+    pub fn reset_has_enemy(&mut self) {
+        self.has_enemy = vec![false; self.size[0] * self.size[1]];
     }
 
     #[inline(always)]
@@ -112,7 +115,7 @@ impl GameBoard {
     pub fn destroy(&mut self, com: &mut Commands, idx: usize) {
         if self.board[idx].filled {
             if let Some(turret) = &self.board[idx].turret {
-                turret.despawn(com);
+                com.entity(turret.1).despawn_recursive();
             }
             self.board[idx].filled = false;
             self.board[idx].turret = None;

@@ -16,7 +16,11 @@ pub struct FontAssets {
 #[derive(AssetCollection)]
 pub struct ModelAssets {
     #[asset(path = "models/units/laser.glb#Scene0")]
-    pub laser_unit: Handle<Scene>,
+    pub laser_turret: Handle<Scene>,
     #[asset(path = "models/units/shockwave.glb#Scene0")]
-    pub shockwave_unit: Handle<Scene>,
+    pub shockwave_turret: Handle<Scene>,
+    #[asset(path = "models/projectiles/laser_blast.glb#Scene0")]
+    pub projectile_laser_blast: Handle<Scene>,
+    #[asset(path = "models/misc/disc.glb#Scene0")]
+    pub disc: Handle<Scene>,
 }

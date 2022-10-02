@@ -23,6 +23,7 @@ pathfinding = "3.0"
 bevy_mod_picking = "0.9"
 bevy_mod_raycast = "0.6"
 iyes_loopless = "0.7"
+bevy-scene-hook = "4.0"
 
 # Enable only a small amount of optimization in debug mode
 [profile.dev]

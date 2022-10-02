@@ -7,13 +7,14 @@ use bevy::{
     asset::AssetServerSettings,
     math::*,
     prelude::*,
+    render::camera::Projection,
     window::{PresentMode, WindowMode, WindowResizeConstraints},
 };
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
 use bevy_mod_picking::*;
 use bevy_mod_raycast::RayCastMesh;
 
-use bevy_scene_hook::HookPlugin;
+use bevy_scene_hook::{HookPlugin, HookedSceneBundle, SceneHook};
 use board::GameBoard;
 use enemies::{
     destroy_enemies, move_enemy_along_path, move_flying_enemy, spawn_enemy, spawn_flying_enemy,
@@ -22,8 +23,8 @@ use enemies::{
 use iyes_loopless::prelude::*;
 use player::{MyRaycastSet, PlayerPlugin};
 use turrets::{
-    bobble_shockwave_spheres, laser_point_at_enemy, position_caps, progress_explosions,
-    progress_projectiles, turret_fire,
+    basic_light, bobble_shockwave_spheres, laser_point_at_enemy, position_caps,
+    progress_explosions, progress_projectiles, turret_fire,
 };
 use ui::GameUI;
 pub mod assets;
@@ -73,6 +74,7 @@ fn main() {
     .add_plugin(GameUI)
     .add_plugin(PlayerPlugin)
     .add_plugin(HookPlugin);
+    //.add_plugin(EditorPlugin);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -111,13 +113,9 @@ fn setup(
     mut com: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    model_assets: Res<ModelAssets>,
 ) {
-    com.insert_resource(GameBoard::new(
-        ivec2(-12, -12),
-        [24, 24],
-        ivec2(0, 0),
-        ivec2(22, 22),
-    ));
+    let b = GameBoard::new(ivec2(-12, -12), [24, 24], ivec2(0, 0), ivec2(22, 22));
     //com.insert_resource(DefaultPluginState::<MyRaycastSet>::default().with_debug_cursor());
     // plane
     com.spawn_bundle(PbrBundle {
@@ -146,12 +144,45 @@ fn setup(
         ),
         ..default()
     });
-
+    let side = 3.0;
     // camera
     com.spawn_bundle(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 24.0, 18.0).looking_at(vec3(0.0, 0.0, 3.0), Vec3::Y),
+        transform: (Transform::from_translation(vec3(48.0 + side, 48.0, 48.0 - side)))
+            .looking_at(vec3(side, -2.0, -side), Vec3::Y),
+        projection: Projection::Perspective(PerspectiveProjection {
+            fov: 16f32.to_radians(),
+            ..default()
+        }),
         ..default()
     })
     .insert_bundle(PickingCameraBundle::default())
     .insert(RayCastSource::<MyRaycastSet>::new());
+
+    // Main Base
+
+    let mut ecmds = com.spawn();
+    ecmds.insert(MainBase);
+    basic_light(
+        &mut ecmds,
+        Color::rgb(1.0, 0.1, 1.0),
+        200.0,
+        6.0,
+        2.0,
+        vec3(0.0, 2.0, 0.0),
+    );
+
+    ecmds.insert_bundle(HookedSceneBundle {
+        scene: SceneBundle {
+            scene: model_assets.base.clone(),
+            transform: Transform::from_translation(b.ls_to_ws_vec3(b.dest)),
+            ..default()
+        },
+        hook: SceneHook::new(move |_entity, _cmds| {}),
+    });
+
+    // Insert Board
+    com.insert_resource(b);
 }
+
+#[derive(Component)]
+struct MainBase;

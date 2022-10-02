@@ -1,7 +1,12 @@
 use bevy::{math::*, prelude::*};
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 
-use crate::{assets::ModelAssets, board::GameBoard, player::PlayerState, turrets::basic_light};
+use crate::{
+    assets::ModelAssets,
+    board::GameBoard,
+    player::PlayerState,
+    turrets::{basic_light, DiscExplosion},
+};
 
 #[derive(Component, Deref, DerefMut)]
 pub struct EnemyPath(pub Option<(Vec<IVec2>, u32)>);
@@ -156,31 +161,82 @@ pub fn update_enemy_paths(
 }
 
 pub fn move_enemy_along_path(
+    mut com: Commands,
     time: Res<Time>,
     b: Res<GameBoard>,
-    mut enemies: Query<(&mut Transform, &mut EnemyPath, &Enemy)>,
+    mut enemies: Query<(Entity, &mut Transform, &mut EnemyPath, &Enemy)>,
+    mut player: ResMut<PlayerState>,
+    model_assets: Res<ModelAssets>,
 ) {
-    for (mut trans, enemy_path, enemy) in enemies.iter_mut() {
+    for (enemy_entity, mut enemy_trans, enemy_path, enemy) in enemies.iter_mut() {
         if let Some(path) = &enemy_path.0 {
-            let p = trans.translation;
+            let p = enemy_trans.translation;
             let a = b.ls_to_ws_vec3(path.0[1]);
             let next_pos = a;
             if !b.has_enemy[b.ls_to_idx(b.ws_vec3_to_ls(next_pos))] {
-                trans.translation +=
+                enemy_trans.translation +=
                     (next_pos - p).normalize() * time.delta_seconds() * enemy.speed;
             }
-            trans.look_at(next_pos, Vec3::Y);
+            enemy_trans.look_at(next_pos, Vec3::Y);
+            if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 0.5 {
+                player.health -= 0.1;
+                com.entity(enemy_entity).despawn_recursive();
+                let mut ecmds = com.spawn_bundle(SceneBundle {
+                    scene: model_assets.disc.clone(),
+                    transform: Transform::from_translation(enemy_trans.translation + Vec3::Y * 0.5),
+                    ..Default::default()
+                });
+                ecmds.insert(DiscExplosion {
+                    speed: 9.0,
+                    size: 4.0,
+                    progress: 0.0,
+                });
+                basic_light(
+                    &mut ecmds,
+                    Color::rgb(1.0, 0.8, 0.7),
+                    300.0,
+                    4.5,
+                    0.75,
+                    vec3(0.0, 1.6, 0.0),
+                );
+            }
         }
     }
 }
 
 pub fn move_flying_enemy(
+    mut com: Commands,
     time: Res<Time>,
-    mut enemies: Query<(&mut Transform, &mut FlyingEnemy, &Enemy)>,
+    mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
+    mut player: ResMut<PlayerState>,
+    model_assets: Res<ModelAssets>,
+    b: Res<GameBoard>,
 ) {
-    for (mut enemy_trans, fly_enemy, enemy) in enemies.iter_mut() {
+    for (enemy_entity, mut enemy_trans, fly_enemy, enemy) in enemies.iter_mut() {
         enemy_trans.look_at(fly_enemy.dest, Vec3::Y);
         let dir = (fly_enemy.dest - enemy_trans.translation).normalize();
         enemy_trans.translation += dir * enemy.speed * time.delta_seconds();
+        if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 0.5 {
+            player.health -= 0.05;
+            com.entity(enemy_entity).despawn_recursive();
+            let mut ecmds = com.spawn_bundle(SceneBundle {
+                scene: model_assets.disc.clone(),
+                transform: Transform::from_translation(enemy_trans.translation + Vec3::Y * 0.5),
+                ..Default::default()
+            });
+            ecmds.insert(DiscExplosion {
+                speed: 9.0,
+                size: 4.0,
+                progress: 0.0,
+            });
+            basic_light(
+                &mut ecmds,
+                Color::rgb(1.0, 0.8, 0.7),
+                300.0,
+                4.5,
+                0.75,
+                vec3(0.0, 1.6, 0.0),
+            );
+        }
     }
 }

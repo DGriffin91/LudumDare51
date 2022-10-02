@@ -26,6 +26,9 @@ pub struct ModelAssets {
     #[asset(path = "models/units/flying_unit.glb#Scene0")]
     pub flying_enemy: Handle<Scene>,
 
+    #[asset(path = "models/units/base.glb#Scene0")]
+    pub base: Handle<Scene>,
+
     // --- Projectiles ---
     #[asset(path = "models/projectiles/laser_blast.glb#Scene0")]
     pub projectile_laser_blast: Handle<Scene>,

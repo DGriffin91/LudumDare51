@@ -37,6 +37,7 @@ fn ui_sidebar(
         .min_width(window.width() * 0.17)
         .default_width(window.width() * 0.17)
         .show(egui_context.ctx_mut(), |ui| {
+            ui.label(&format!("{} HEALTH", (player.health * 100.0) as u32));
             ui.label(&format!("{} CREDITS", player.credits));
             ui.label(&format!("{} KILLS", player.kills));
             for (message, turret) in [

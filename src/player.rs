@@ -13,6 +13,7 @@ pub struct PlayerState {
     pub credits: u64,
     pub turret_to_place: Option<Turret>,
     pub kills: u64,
+    pub health: f32,
 }
 
 pub struct PlayerPlugin;
@@ -23,6 +24,7 @@ impl Plugin for PlayerPlugin {
                 credits: 5000,
                 turret_to_place: None,
                 kills: 0,
+                health: 1.0,
             })
             .add_enter_system(GameState::RunLevel, setup)
             .add_system_set(

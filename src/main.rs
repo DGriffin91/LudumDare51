@@ -117,7 +117,7 @@ fn setup(
     model_assets: Res<ModelAssets>,
 ) {
     let b = GameBoard::new(ivec2(-12, -12), [24, 24], ivec2(0, 0), ivec2(22, 22));
-    //com.insert_resource(DefaultPluginState::<MyRaycastSet>::default().with_debug_cursor());
+    // com.insert_resource(DefaultPluginState::<MyRaycastSet>::default().with_debug_cursor());
     // plane
     com.spawn_bundle(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Plane { size: 24.0 })),
@@ -131,6 +131,12 @@ fn setup(
     .insert_bundle(PickableBundle::default())
     .insert(Board)
     .insert(RayCastMesh::<MyRaycastSet>::default());
+
+    com.spawn_bundle(SceneBundle {
+        scene: model_assets.board.clone(),
+        transform: Transform::from_translation(vec3(0.0, -0.1, 0.0)),
+        ..default()
+    });
 
     // light
     com.spawn_bundle(DirectionalLightBundle {

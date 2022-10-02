@@ -40,4 +40,6 @@ pub struct ModelAssets {
     // --- Misc ---
     #[asset(path = "models/misc/disc.glb#Scene0")]
     pub disc: Handle<Scene>,
+    #[asset(path = "models/misc/board.glb#Scene0")]
+    pub board: Handle<Scene>,
 }

@@ -413,7 +413,7 @@ pub fn progress_projectiles(
     time: Res<Time>,
     mut com: Commands,
     mut projectiles: Query<(Entity, &mut Transform, &mut Projectile), Without<Enemy>>,
-    mut enemies: Query<(Entity, &Transform, &mut Health), With<Enemy>>,
+    mut enemies: Query<(&Transform, &mut Health), With<Enemy>>,
     model_assets: Res<ModelAssets>,
 ) {
     for (proj_entity, mut proj_trans, mut projectile) in projectiles.iter_mut() {
@@ -421,7 +421,7 @@ pub fn progress_projectiles(
 
         if proj_trans.translation.distance(projectile.dest) < 0.5 {
             projectile.hit = true;
-            for (enemy_entity, enemy_trans, mut health) in enemies.iter_mut() {
+            for (enemy_trans, mut health) in enemies.iter_mut() {
                 if enemy_trans.translation.distance(proj_trans.translation)
                     < projectile.blast_radius
                 {

@@ -69,20 +69,20 @@ impl Turret {
                 if let Some(name) = entity.get::<Name>() {
                     if name.contains("BobbleSphere") {
                         cmds.insert(ShockwaveSphere {
-                            top_parent: entity_id.clone(),
+                            top_parent: entity_id,
                             phase: 0.0,
                         });
                     }
                     if name.contains("Top Cap") {
                         cmds.insert(Cap {
-                            top_parent: entity_id.clone(),
+                            top_parent: entity_id,
                             progress: 0.0,
                             direction: Vec3::Y * 0.15,
                         });
                     }
                     if name.contains("Bottom Cap") {
                         cmds.insert(Cap {
-                            top_parent: entity_id.clone(),
+                            top_parent: entity_id,
                             progress: 0.0,
                             direction: -Vec3::Y * 0.15,
                         });
@@ -125,7 +125,7 @@ impl Turret {
                 if let Some(name) = entity.get::<Name>() {
                     if name.contains("Head") {
                         cmds.insert(Swivel {
-                            top_parent: entity_id.clone(),
+                            top_parent: entity_id,
                         });
                     }
                 }
@@ -185,7 +185,7 @@ pub fn turret_fire(
                                 dir: fire_dir,
                                 speed: 0.5,
                                 dest: enemy_trans.translation,
-                                enemy: entity.clone(),
+                                enemy: entity,
                                 damage: damage.0,
                                 blast_radius: 1.5,
                                 hit: false,

@@ -88,29 +88,27 @@ pub fn mouse_interact(
         let p = b.ls_to_ws_vec3(b.ws_vec3_to_ls(cursor_pos));
         trans.translation = p + vec3(0.0, -0.4, 0.0);
     }
-    if buttons.just_pressed(MouseButton::Left) {
-        if (cursor_pos.y - 0.0).abs() < 0.1 {
-            let idx = b.ls_to_idx(b.ws_vec3_to_ls(cursor_pos));
-            if !b.board[idx].filled {
-                b.board[idx].filled = true; //Just temp fill so we can check
-                let possible_path = b.path(b.start);
-                b.board[idx].filled = false; //Undo temp fill
-                if possible_path.is_some() {
-                    if let Some(selected_turret) = player.turret_to_place {
-                        let cost = selected_turret.cost();
-                        if player.credits >= cost {
-                            player.credits -= cost;
-                            let pos = b.ls_to_ws_vec3(b.idx_to_ls(idx));
-                            b.board[idx].turret = Some(match selected_turret {
-                                Turret::Laser => {
-                                    Turret::spawn_laser_turret(&mut com, pos, &model_assets)
-                                }
-                                Turret::Shockwave => {
-                                    Turret::spawn_shockwave_turret(&mut com, pos, &model_assets)
-                                }
-                            });
-                            b.board[idx].filled = true;
-                        }
+    if buttons.just_pressed(MouseButton::Left) && (cursor_pos.y - 0.0).abs() < 0.1 {
+        let idx = b.ls_to_idx(b.ws_vec3_to_ls(cursor_pos));
+        if !b.board[idx].filled {
+            b.board[idx].filled = true; //Just temp fill so we can check
+            let possible_path = b.path(b.start);
+            b.board[idx].filled = false; //Undo temp fill
+            if possible_path.is_some() {
+                if let Some(selected_turret) = player.turret_to_place {
+                    let cost = selected_turret.cost();
+                    if player.credits >= cost {
+                        player.credits -= cost;
+                        let pos = b.ls_to_ws_vec3(b.idx_to_ls(idx));
+                        b.board[idx].turret = Some(match selected_turret {
+                            Turret::Laser => {
+                                Turret::spawn_laser_turret(&mut com, pos, &model_assets)
+                            }
+                            Turret::Shockwave => {
+                                Turret::spawn_shockwave_turret(&mut com, pos, &model_assets)
+                            }
+                        });
+                        b.board[idx].filled = true;
                     }
                 }
             }

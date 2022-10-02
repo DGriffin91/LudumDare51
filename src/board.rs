@@ -4,19 +4,13 @@ use pathfinding::prelude::astar;
 use crate::turrets::Turret;
 
 #[derive(Clone)]
+#[derive(Default)]
 pub struct Cell {
     pub filled: bool,
     pub turret: Option<(Turret, Entity)>,
 }
 
-impl Default for Cell {
-    fn default() -> Cell {
-        Cell {
-            filled: false,
-            turret: None,
-        }
-    }
-}
+
 
 pub struct GameBoard {
     pub size: [usize; 2],
@@ -65,12 +59,13 @@ impl GameBoard {
     pub fn idx_to_ls(&self, idx: usize) -> IVec2 {
         let x = idx % self.size[0];
         let y = (idx / self.size[0]) % self.size[1];
-        let pos = ivec2(x as i32, y as i32);
-        pos
+        
+        ivec2(x as i32, y as i32)
     }
 
     pub fn path(&self, start: IVec2) -> Option<(Vec<IVec2>, u32)> {
-        let a = astar(
+        
+        astar(
             &start,
             |p| self.successors(*p),
             |p| {
@@ -78,8 +73,7 @@ impl GameBoard {
                 (a.x + a.y) as u32
             },
             |p| *p == self.dest,
-        );
-        a
+        )
     }
 
     #[inline(always)]

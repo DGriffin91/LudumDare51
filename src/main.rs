@@ -21,10 +21,10 @@ use enemies::{
     spawn_rolling_enemy, spawn_rolling_enemy2, update_board_has_enemy, update_enemy_paths,
 };
 use iyes_loopless::prelude::*;
-use player::{MyRaycastSet, PlayerPlugin};
+use player::{MyRaycastSet, PlayerPlugin, PlayerState};
 use turrets::{
     basic_light, bobble_shockwave_spheres, laser_point_at_enemy, position_caps,
-    progress_explosions, progress_projectiles, turret_fire,
+    progress_explosions, progress_projectiles, turret_fire, Disabled, Turret,
 };
 use ui::GameUI;
 pub mod assets;
@@ -100,6 +100,7 @@ fn main() {
                 .with_system(position_caps)
                 .with_system(move_flying_enemy)
                 .with_system(spawn_flying_enemy)
+                .with_system(destroy_base)
                 .into(),
         );
 
@@ -193,3 +194,39 @@ fn setup(
 
 #[derive(Component)]
 struct MainBase;
+
+#[derive(Component)]
+struct MainBaseDestroyed;
+
+fn destroy_base(
+    mut com: Commands,
+    player: Res<PlayerState>,
+    main_base: Query<(Entity, &Transform), With<MainBase>>,
+    model_assets: Res<ModelAssets>,
+    mut turrets: Query<Entity, With<Turret>>,
+    mut lights: Query<&mut PointLight>,
+) {
+    if let Some((main_base_entity, main_base_trans)) = main_base.iter().next() {
+        if player.health < 0.0 {
+            com.entity(main_base_entity).despawn_recursive();
+            com.spawn_bundle(HookedSceneBundle {
+                scene: SceneBundle {
+                    scene: model_assets.base_destroyed.clone(),
+                    transform: *main_base_trans,
+                    ..default()
+                },
+                hook: SceneHook::new(move |_entity, _cmds| {}),
+            });
+            for entity in turrets.iter_mut() {
+                com.entity(entity).insert(Disabled);
+                for mut light in lights.iter_mut() {
+                    //if parent.get() == entity {
+                    light.intensity = 0.0;
+                    light.range = 0.0;
+                    light.color = Color::BLACK;
+                    //}
+                }
+            }
+        }
+    }
+}

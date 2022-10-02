@@ -28,7 +28,7 @@ impl PlayerState {
     }
 
     pub fn spawn_rate_cut(&self) -> f32 {
-        self.level.powf(0.6) * 0.1
+        self.level.powf(0.6) * 0.5
     }
 
     pub fn enemy_health_mult(&self) -> f32 {
@@ -72,8 +72,10 @@ impl Plugin for PlayerPlugin {
 }
 
 fn set_level(time: Res<Time>, mut player: ResMut<PlayerState>) {
-    player.level_time += time.delta_seconds();
-    player.level = (player.level_time / 10.0).floor();
+    if player.health > 0.0 {
+        player.level_time += time.delta_seconds();
+        player.level = (player.level_time / 10.0).floor();
+    }
 }
 
 fn setup(

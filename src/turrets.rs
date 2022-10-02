@@ -197,7 +197,11 @@ pub fn turret_fire(
             &mut Cooldown,
             &Turret,
         ),
-        (Without<LaserBeam>, Without<DiamondLasers>),
+        (
+            Without<LaserBeam>,
+            Without<DiamondLasers>,
+            Without<Disabled>,
+        ),
     >,
     mut enemies: Query<
         (Entity, &Transform, &mut Health),
@@ -210,6 +214,16 @@ pub fn turret_fire(
     mut continuous_laser_light: Query<(&Parent, &mut PointLight)>,
     player: Res<PlayerState>,
 ) {
+    for (mut vis, _laser) in diamond_lasers.iter_mut() {
+        vis.is_visible = false;
+    }
+    for (_, mut vis, _laser) in laser_beams.iter_mut() {
+        vis.is_visible = false;
+    }
+    for (_parent, mut light) in continuous_laser_light.iter_mut() {
+        light.intensity = 90.0;
+    }
+
     for (turret_entity, turret_trans, damage, range, mut cooldown, turret) in turrets.iter_mut() {
         cooldown.tick(time.delta());
 
@@ -268,22 +282,6 @@ pub fn turret_fire(
                 Turret::LaserContinuous => {
                     if let Some(entity) = closest {
                         if let Ok((_entity, enemy_trans, mut health)) = enemies.get_mut(entity) {
-                            // TODO don't loop 2x
-                            for (mut vis, laser) in diamond_lasers.iter_mut() {
-                                if laser.top_parent == turret_entity {
-                                    vis.is_visible = false;
-                                }
-                            }
-                            for (_, mut vis, laser) in laser_beams.iter_mut() {
-                                if laser.top_parent == turret_entity {
-                                    vis.is_visible = false;
-                                }
-                            }
-                            for (parent, mut light) in continuous_laser_light.iter_mut() {
-                                if parent.get() == turret_entity {
-                                    light.intensity = 90.0;
-                                }
-                            }
                             if closest_dist < **range {
                                 //cooldown.reset(); Don't ever reset continuous
                                 health.0 -= damage.0 * time.delta_seconds() * player.laser_upgrade;
@@ -376,7 +374,10 @@ pub fn basic_light(
 }
 
 pub fn laser_point_at_enemy(
-    mut turrets: Query<(Entity, &mut Transform, &Range), (With<Turret>, Without<Swivel>)>,
+    mut turrets: Query<
+        (Entity, &mut Transform, &Range),
+        (With<Turret>, Without<Swivel>, Without<Disabled>),
+    >,
     mut swivels: Query<(&mut Transform, &Swivel), Without<Turret>>,
     mut enemies: Query<&Transform, (With<Enemy>, (Without<Turret>, Without<Swivel>))>,
 ) {
@@ -482,7 +483,14 @@ pub fn bobble_shockwave_spheres(
     time: Res<Time>,
     mut shockwave_spheres: Query<(&mut Transform, &mut ShockwaveSphere)>,
     caps: Query<&Cap>,
+    player: Res<PlayerState>,
 ) {
+    if player.health < 0.0 {
+        for (mut trans, _sh) in shockwave_spheres.iter_mut() {
+            trans.translation = Vec3::Y * 0.7;
+        }
+        return;
+    }
     for (mut trans, mut sh) in shockwave_spheres.iter_mut() {
         let mut disable_bobble = false;
         for cap in caps.iter() {
@@ -556,3 +564,6 @@ pub struct DiamondLasers {
 pub struct LaserBeam {
     top_parent: Entity,
 }
+
+#[derive(Component, Debug)]
+pub struct Disabled;

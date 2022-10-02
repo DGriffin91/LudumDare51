@@ -32,7 +32,7 @@ pub fn spawn_rolling_enemy(
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
 ) {
-    if player.level < 10.0 {
+    if player.level < 10.0 || player.health < 0.0 {
         return;
     }
     let since_startup = time.seconds_since_startup() as f32;
@@ -75,7 +75,7 @@ pub fn spawn_rolling_enemy2(
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
 ) {
-    if player.level < 1.0 {
+    if player.level < 1.0 || player.health < 0.0 {
         return;
     }
     let since_startup = time.seconds_since_startup() as f32;
@@ -118,7 +118,7 @@ pub fn spawn_flying_enemy(
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
 ) {
-    if player.level < 20.0 {
+    if player.level < 20.0 || player.health < 0.0 {
         return;
     }
     let since_startup = time.seconds_since_startup() as f32;
@@ -223,17 +223,22 @@ pub fn move_enemy_along_path(
     mut player: ResMut<PlayerState>,
     model_assets: Res<ModelAssets>,
 ) {
+    if player.health < 0.0 {
+        return;
+    }
     for (enemy_entity, mut enemy_trans, enemy_path, enemy) in enemies.iter_mut() {
         if let Some(path) = &enemy_path.0 {
-            let p = enemy_trans.translation;
-            let a = b.ls_to_ws_vec3(path.0[1]);
-            let next_pos = a;
-            if !b.has_enemy[b.ls_to_idx(b.ws_vec3_to_ls(next_pos))] {
-                enemy_trans.translation +=
-                    (next_pos - p).normalize() * time.delta_seconds() * enemy.speed;
+            if path.0.len() > 1 {
+                let p = enemy_trans.translation;
+                let a = b.ls_to_ws_vec3(path.0[1]);
+                let next_pos = a;
+                if !b.has_enemy[b.ls_to_idx(b.ws_vec3_to_ls(next_pos))] {
+                    enemy_trans.translation +=
+                        (next_pos - p).normalize() * time.delta_seconds() * enemy.speed;
+                }
+                enemy_trans.look_at(next_pos, Vec3::Y);
             }
-            enemy_trans.look_at(next_pos, Vec3::Y);
-            if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 0.5 {
+            if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 1.0 {
                 player.health -= 0.1;
                 com.entity(enemy_entity).despawn_recursive();
                 let mut ecmds = com.spawn_bundle(SceneBundle {

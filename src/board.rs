@@ -102,14 +102,17 @@ impl GameBoard {
     pub fn ls_to_ws_vec3(&self, ls: IVec2) -> Vec3 {
         ivec2_to_vec3(self.ls_to_ws(ls)) + vec3(0.5, 0.0, 0.5)
     }
-    pub fn destroy(&mut self, com: &mut Commands, idx: usize) {
+    pub fn destroy(&mut self, com: &mut Commands, idx: usize) -> Option<Turret> {
+        let mut rturret = None;
         if self.board[idx].filled {
             if let Some(turret) = &self.board[idx].turret {
                 com.entity(turret.1).despawn_recursive();
+                rturret = Some(turret.0);
             }
             self.board[idx].filled = false;
             self.board[idx].turret = None;
         }
+        rturret
     }
 }
 

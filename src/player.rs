@@ -14,6 +14,7 @@ pub struct PlayerState {
     pub turret_to_place: Option<Turret>,
     pub kills: u64,
     pub health: f32,
+    pub sell_mode: bool,
 }
 
 pub struct PlayerPlugin;
@@ -25,6 +26,7 @@ impl Plugin for PlayerPlugin {
                 turret_to_place: None,
                 kills: 0,
                 health: 1.0,
+                sell_mode: false,
             })
             .add_enter_system(GameState::RunLevel, setup)
             .add_system_set(
@@ -93,7 +95,13 @@ pub fn mouse_interact(
     }
     if buttons.just_pressed(MouseButton::Left) && (cursor_pos.y - 0.0).abs() < 0.1 {
         let idx = b.ls_to_idx(b.ws_vec3_to_ls(cursor_pos));
-        if !b.board[idx].filled {
+        if player.sell_mode {
+            let turret = b.destroy(&mut com, idx);
+            if let Some(turret) = turret {
+                // Player gets back 50% of cost when selling
+                player.credits += turret.cost() / 2;
+            }
+        } else if !b.board[idx].filled {
             b.board[idx].filled = true; //Just temp fill so we can check
             let possible_path = b.path(b.start);
             b.board[idx].filled = false; //Undo temp fill
@@ -121,10 +129,6 @@ pub fn mouse_interact(
         }
     }
 
-    if buttons.just_pressed(MouseButton::Right) {
-        let idx = b.ls_to_idx(b.ws_vec3_to_ls(cursor_pos));
-        b.destroy(&mut com, idx);
-    }
     //for event in events.iter() {
     //    match event {
     //        PickingEvent::Selection(e) => info!("A selection event happened: {:?}", e),

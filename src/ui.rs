@@ -14,10 +14,10 @@ impl Plugin for GameUI {
     }
 }
 
-const SELECTED_COLOR: Color32 = Color32::from_rgb(96, 96, 96);
-const DESELECTED_COLOR: Color32 = Color32::from_rgb(64, 64, 64);
+const SELECTED_COLOR: Color32 = Color32::from_rgb(128, 128, 128);
+const DESELECTED_COLOR: Color32 = Color32::from_rgb(48, 48, 48);
 
-fn turret_button(ui: &mut egui::Ui, text: &str, selected: bool) -> bool {
+fn select_button(ui: &mut egui::Ui, text: &str, selected: bool) -> bool {
     ui.add(egui::Button::new(text).fill(if selected {
         SELECTED_COLOR
     } else {
@@ -45,8 +45,14 @@ fn ui_sidebar(
                 ("WAVE TURRET", Turret::Shockwave),
                 ("LASER TURRET", Turret::LaserContinuous),
             ] {
-                if turret_button(ui, message, player.turret_to_place == Some(turret)) {
+                if select_button(ui, message, player.turret_to_place == Some(turret)) {
                     player.turret_to_place = Some(turret);
+                }
+            }
+            if select_button(ui, "SELL", player.sell_mode) {
+                player.sell_mode = !player.sell_mode;
+                if player.sell_mode {
+                    player.turret_to_place = None;
                 }
             }
         });

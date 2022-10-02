@@ -36,22 +36,28 @@ impl PlayerState {
     }
 }
 
+impl Default for PlayerState {
+    fn default() -> Self {
+        PlayerState {
+            credits: 1000,
+            turret_to_place: None,
+            kills: 0,
+            health: 1.0,
+            sell_mode: false,
+            blaster_upgrade: 1.0,
+            laser_upgrade: 1.0,
+            wave_upgrade: 1.0,
+            level_time: 0.0,
+            level: 0.0,
+        }
+    }
+}
+
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugin(DefaultRaycastingPlugin::<MyRaycastSet>::default())
-            .insert_resource(PlayerState {
-                credits: 1000,
-                turret_to_place: None,
-                kills: 0,
-                health: 1.0,
-                sell_mode: false,
-                blaster_upgrade: 1.0,
-                laser_upgrade: 1.0,
-                wave_upgrade: 1.0,
-                level_time: 0.0,
-                level: 0.0,
-            })
+            .insert_resource(PlayerState::default())
             .add_enter_system(GameState::RunLevel, setup)
             .add_system_set(
                 ConditionSet::new()
@@ -135,7 +141,7 @@ pub fn mouse_interact(
             }
         } else if !b.board[idx].filled {
             b.board[idx].filled = true; //Just temp fill so we can check
-            let possible_path = b.path(b.start);
+            let possible_path = b.path(b.start, b.dest);
             b.board[idx].filled = false; //Undo temp fill
             if possible_path.is_some() {
                 if let Some(selected_turret) = player.turret_to_place {

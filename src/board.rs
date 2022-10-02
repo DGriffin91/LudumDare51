@@ -18,6 +18,12 @@ pub struct GameBoard {
     pub dest: IVec2,
 }
 
+impl Default for GameBoard {
+    fn default() -> Self {
+        GameBoard::new(ivec2(-12, -12), [24, 24], ivec2(0, 0), ivec2(22, 22))
+    }
+}
+
 impl GameBoard {
     pub fn new(position: IVec2, size: [usize; 2], start: IVec2, dest: IVec2) -> GameBoard {
         let board = vec![Cell::default(); size[0] * size[1]];
@@ -60,15 +66,15 @@ impl GameBoard {
         ivec2(x as i32, y as i32)
     }
 
-    pub fn path(&self, start: IVec2) -> Option<(Vec<IVec2>, u32)> {
+    pub fn path(&self, start: IVec2, end: IVec2) -> Option<(Vec<IVec2>, u32)> {
         astar(
             &start,
             |p| self.successors(*p),
             |p| {
-                let a = (self.dest - *p).abs();
+                let a = (end - *p).abs();
                 (a.x + a.y) as u32
             },
-            |p| *p == self.dest,
+            |p| *p == end,
         )
     }
 

@@ -8,8 +8,12 @@ use crate::{
     turrets::{basic_light, DiscExplosion},
 };
 
-#[derive(Component, Deref, DerefMut)]
-pub struct EnemyPath(pub Option<(Vec<IVec2>, u32)>);
+use rand::Rng;
+#[derive(Component, Default)]
+pub struct EnemyPath {
+    pub path: Option<(Vec<IVec2>, u32)>,
+    pub new_rand_loc_timer: f32,
+}
 
 #[derive(Component, Deref, DerefMut)]
 pub struct Health(pub f32);
@@ -22,6 +26,7 @@ pub struct Enemy {
 #[derive(Component)]
 pub struct FlyingEnemy {
     dest: Vec3,
+    new_rand_loc_timer: f32,
 }
 
 pub fn spawn_rolling_enemy(
@@ -41,7 +46,7 @@ pub fn spawn_rolling_enemy(
         let mut ecmds = com.spawn();
 
         ecmds
-            .insert(EnemyPath(None))
+            .insert(EnemyPath::default())
             .insert(Health(1.2 * player.enemy_health_mult()))
             .insert(Enemy {
                 speed: 2.0 + player.enemy_speed_boost(),
@@ -84,7 +89,7 @@ pub fn spawn_rolling_enemy2(
         let mut ecmds = com.spawn();
 
         ecmds
-            .insert(EnemyPath(None))
+            .insert(EnemyPath::default())
             .insert(Health(0.6 * player.enemy_health_mult()))
             .insert(Enemy {
                 speed: 3.0 + player.enemy_speed_boost(),
@@ -133,6 +138,7 @@ pub fn spawn_flying_enemy(
             })
             .insert(FlyingEnemy {
                 dest: b.ls_to_ws_vec3(b.dest),
+                new_rand_loc_timer: 0.0,
             });
 
         basic_light(
@@ -144,10 +150,21 @@ pub fn spawn_flying_enemy(
             vec3(0.0, 0.3, -0.2),
         );
 
+        let mut rng = rand::thread_rng();
+
+        // Random pos off screen
+        let rnd_offset = vec3(
+            rng.gen_range(-15.0..-5.0) as f32,
+            0.0,
+            rng.gen_range(-15.0..-5.0) as f32,
+        );
+
         ecmds.insert_bundle(HookedSceneBundle {
             scene: SceneBundle {
                 scene: model_assets.flying_enemy.clone(),
-                transform: Transform::from_translation(b.ls_to_ws_vec3(b.start) + Vec3::Y * 2.0),
+                transform: Transform::from_translation(
+                    b.ls_to_ws_vec3(b.start) + Vec3::Y * 2.0 + rnd_offset,
+                ),
                 ..default()
             },
             hook: SceneHook::new(move |_entity, _cmds| {}),
@@ -183,20 +200,38 @@ pub struct PathInd;
 pub fn update_enemy_paths(
     b: Res<GameBoard>,
     mut enemies: Query<(&Transform, &mut EnemyPath)>,
+    player: Res<PlayerState>,
+    time: Res<Time>,
     //mut com: Commands,
     //path_ind: Query<Entity, With<PathInd>>,
     //mut meshes: ResMut<Assets<Mesh>>,
     //mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (trans, mut enemy_path) in enemies.iter_mut() {
-        enemy_path.0 = b.path(b.ws_vec3_to_ls(trans.translation));
+    if player.health < 0.0 {
+        let mut rng = rand::thread_rng();
+        for (trans, mut enemy_path) in enemies.iter_mut() {
+            enemy_path.new_rand_loc_timer -= time.delta_seconds();
+            if enemy_path.new_rand_loc_timer < 0.0 {
+                enemy_path.new_rand_loc_timer += rng.gen_range(4.0..6.0);
+                let rnd = vec3(
+                    rng.gen_range(-12.0..12.0) as f32,
+                    0.0,
+                    rng.gen_range(-12.0..12.0) as f32,
+                );
+                enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), b.ws_vec3_to_ls(rnd));
+            }
+        }
+    } else {
+        for (trans, mut enemy_path) in enemies.iter_mut() {
+            enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), b.dest);
+        }
     }
     // DEBUG PATH SPHERES
     //for entity in &path_ind {
     //    com.entity(entity).despawn_recursive();
     //}
     //if let Some((_, enemy_path)) = enemies.iter().next() {
-    //    for path in &enemy_path.0 {
+    //    for path in &enemy_path.path {
     //        for p in &path.0 {
     //            com.spawn_bundle(PbrBundle {
     //                mesh: meshes.add(Mesh::from(shape::UVSphere {
@@ -223,11 +258,8 @@ pub fn move_enemy_along_path(
     mut player: ResMut<PlayerState>,
     model_assets: Res<ModelAssets>,
 ) {
-    if player.health < 0.0 {
-        return;
-    }
     for (enemy_entity, mut enemy_trans, enemy_path, enemy) in enemies.iter_mut() {
-        if let Some(path) = &enemy_path.0 {
+        if let Some(path) = &enemy_path.path {
             if path.0.len() > 1 {
                 let p = enemy_trans.translation;
                 let a = b.ls_to_ws_vec3(path.0[1]);
@@ -265,13 +297,28 @@ pub fn move_enemy_along_path(
 }
 
 pub fn move_flying_enemy(
-    mut com: Commands,
     time: Res<Time>,
+    mut com: Commands,
     mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
     mut player: ResMut<PlayerState>,
     model_assets: Res<ModelAssets>,
     b: Res<GameBoard>,
 ) {
+    if player.health < 0.0 {
+        let mut rng = rand::thread_rng();
+        for (_enemy_entity, mut _enemy_trans, mut fly_enemy, _enemy) in enemies.iter_mut() {
+            fly_enemy.new_rand_loc_timer -= time.delta_seconds();
+            if fly_enemy.new_rand_loc_timer < 0.0 {
+                fly_enemy.new_rand_loc_timer += rng.gen_range(1.0..5.0);
+                let rnd = vec3(
+                    rng.gen_range(-35.0..35.0) as f32,
+                    2.0,
+                    rng.gen_range(-35.0..35.0) as f32,
+                );
+                fly_enemy.dest = rnd;
+            }
+        }
+    }
     for (enemy_entity, mut enemy_trans, fly_enemy, enemy) in enemies.iter_mut() {
         enemy_trans.look_at(fly_enemy.dest, Vec3::Y);
         let dir = (fly_enemy.dest - enemy_trans.translation).normalize();

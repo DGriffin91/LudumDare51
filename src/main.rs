@@ -70,6 +70,7 @@ fn main() {
         ..default()
     })
     .insert_resource(ClearColor(Color::BLACK))
+    .insert_resource(GameBoard::default())
     .add_plugins(DefaultPlugins)
     .add_plugin(GameUI)
     .add_plugin(PlayerPlugin)
@@ -116,8 +117,8 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     model_assets: Res<ModelAssets>,
+    b: Res<GameBoard>,
 ) {
-    let b = GameBoard::new(ivec2(-12, -12), [24, 24], ivec2(0, 0), ivec2(22, 22));
     // com.insert_resource(DefaultPluginState::<MyRaycastSet>::default().with_debug_cursor());
     // plane
     com.spawn_bundle(PbrBundle {
@@ -167,7 +168,10 @@ fn setup(
     .insert(RayCastSource::<MyRaycastSet>::new());
 
     // Main Base
+    spawn_main_base(&mut com, &model_assets, &b);
+}
 
+fn spawn_main_base(com: &mut Commands, model_assets: &ModelAssets, b: &GameBoard) {
     let mut ecmds = com.spawn();
     ecmds.insert(MainBase);
     basic_light(
@@ -187,9 +191,6 @@ fn setup(
         },
         hook: SceneHook::new(move |_entity, _cmds| {}),
     });
-
-    // Insert Board
-    com.insert_resource(b);
 }
 
 #[derive(Component)]
@@ -204,7 +205,6 @@ fn destroy_base(
     main_base: Query<(Entity, &Transform), With<MainBase>>,
     model_assets: Res<ModelAssets>,
     mut turrets: Query<Entity, With<Turret>>,
-    mut lights: Query<&mut PointLight>,
 ) {
     if let Some((main_base_entity, main_base_trans)) = main_base.iter().next() {
         if player.health < 0.0 {
@@ -216,16 +216,10 @@ fn destroy_base(
                     ..default()
                 },
                 hook: SceneHook::new(move |_entity, _cmds| {}),
-            });
+            })
+            .insert(MainBaseDestroyed);
             for entity in turrets.iter_mut() {
                 com.entity(entity).insert(Disabled);
-                for mut light in lights.iter_mut() {
-                    //if parent.get() == entity {
-                    light.intensity = 0.0;
-                    light.range = 0.0;
-                    light.color = Color::BLACK;
-                    //}
-                }
             }
         }
     }

@@ -483,14 +483,7 @@ pub fn bobble_shockwave_spheres(
     time: Res<Time>,
     mut shockwave_spheres: Query<(&mut Transform, &mut ShockwaveSphere)>,
     caps: Query<&Cap>,
-    player: Res<PlayerState>,
 ) {
-    if player.health < 0.0 {
-        for (mut trans, _sh) in shockwave_spheres.iter_mut() {
-            trans.translation = Vec3::Y * 0.7;
-        }
-        return;
-    }
     for (mut trans, mut sh) in shockwave_spheres.iter_mut() {
         let mut disable_bobble = false;
         for cap in caps.iter() {

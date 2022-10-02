@@ -20,6 +20,8 @@ pub struct ModelAssets {
     pub laser_turret: Handle<Scene>,
     #[asset(path = "models/units/shockwave.glb#Scene0")]
     pub shockwave_turret: Handle<Scene>,
+    #[asset(path = "models/units/laser_turret_2.glb#Scene0")]
+    pub laser_turret_2: Handle<Scene>,
 
     #[asset(path = "models/units/rolling_unit.glb#Scene0")]
     pub rolling_enemy: Handle<Scene>,

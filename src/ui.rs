@@ -41,8 +41,9 @@ fn ui_sidebar(
             ui.label(&format!("{} CREDITS", player.credits));
             ui.label(&format!("{} KILLS", player.kills));
             for (message, turret) in [
-                ("LASER TURRET", Turret::Laser),
+                ("BLASTER TURRET", Turret::Laser),
                 ("WAVE TURRET", Turret::Shockwave),
+                ("LASER TURRET", Turret::LaserContinuous),
             ] {
                 if turret_button(ui, message, player.turret_to_place == Some(turret)) {
                     player.turret_to_place = Some(turret);

@@ -166,7 +166,7 @@ fn setup(
     basic_light(
         &mut ecmds,
         Color::rgb(1.0, 0.1, 1.0),
-        200.0,
+        400.0,
         6.0,
         2.0,
         vec3(0.0, 2.0, 0.0),

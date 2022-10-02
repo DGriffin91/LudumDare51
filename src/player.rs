@@ -107,6 +107,9 @@ pub fn mouse_interact(
                             Turret::Laser => {
                                 Turret::spawn_laser_turret(&mut com, pos, &model_assets)
                             }
+                            Turret::LaserContinuous => {
+                                Turret::spawn_laser_continuous_turret(&mut com, pos, &model_assets)
+                            }
                             Turret::Shockwave => {
                                 Turret::spawn_shockwave_turret(&mut com, pos, &model_assets)
                             }

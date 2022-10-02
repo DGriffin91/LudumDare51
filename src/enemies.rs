@@ -219,6 +219,12 @@ pub fn update_enemy_paths(
                     rng.gen_range(-12.0..12.0) as f32,
                 );
                 enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), b.ws_vec3_to_ls(rnd));
+            } else {
+                if let Some(path) = &enemy_path.path {
+                    if let Some(last) = path.0.last() {
+                        enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), *last);
+                    }
+                }
             }
         }
     } else {

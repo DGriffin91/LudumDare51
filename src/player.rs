@@ -63,8 +63,6 @@ pub struct MyRaycastSet;
 
 pub fn mouse_interact(
     mut com: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     intersections: Query<&Intersection<MyRaycastSet>>,
     mut b: ResMut<GameBoard>,
     buttons: Res<Input<MouseButton>>,

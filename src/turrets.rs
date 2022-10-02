@@ -46,8 +46,8 @@ impl Turret {
         let entity_id = ecmds.id();
 
         ecmds
-            .insert(AttackDamage(0.05))
-            .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.5), true)))
+            .insert(AttackDamage(0.1))
+            .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.9), true)))
             .insert(Range(4.0))
             .insert(Turret::Shockwave);
         basic_light(
@@ -77,14 +77,14 @@ impl Turret {
                         cmds.insert(Cap {
                             top_parent: entity_id.clone(),
                             progress: 0.0,
-                            direction: Vec3::Y * 0.1,
+                            direction: Vec3::Y * 0.15,
                         });
                     }
                     if name.contains("Bottom Cap") {
                         cmds.insert(Cap {
                             top_parent: entity_id.clone(),
                             progress: 0.0,
-                            direction: -Vec3::Y * 0.1,
+                            direction: -Vec3::Y * 0.15,
                         });
                     }
                 }
@@ -108,8 +108,8 @@ impl Turret {
             .insert(Turret::Laser);
         basic_light(
             &mut ecmds,
-            Color::rgb(1.0, 0.2, 0.1),
-            200.0,
+            Color::rgb(0.3, 0.0, 1.0),
+            70.0,
             3.0,
             0.75,
             vec3(0.0, 1.0, 0.0),
@@ -193,8 +193,8 @@ pub fn turret_fire(
                             });
                             basic_light(
                                 &mut ecmds,
-                                Color::rgb(1.0, 0.0, 0.0),
-                                700.0,
+                                Color::rgb(0.2, 0.0, 1.0),
+                                100.0,
                                 2.0,
                                 1.0,
                                 Vec3::Y * -0.5,
@@ -228,7 +228,7 @@ pub fn turret_fire(
                             basic_light(
                                 &mut ecmds,
                                 Color::rgb(1.0, 0.0, 1.0),
-                                500.0,
+                                70.0,
                                 4.5,
                                 1.0,
                                 Vec3::Y,
@@ -269,7 +269,7 @@ pub fn laser_point_at_enemy(
     mut swivels: Query<(&mut Transform, &Swivel), Without<Turret>>,
     mut enemies: Query<&Transform, (With<Enemy>, (Without<Turret>, Without<Swivel>))>,
 ) {
-    for (turret_entity, mut turret_trans, _range) in turrets.iter_mut() {
+    for (turret_entity, turret_trans, _range) in turrets.iter_mut() {
         let mut closest = Vec3::ZERO;
         let mut closest_dist = INFINITY;
         for enemy_trans in enemies.iter_mut() {
@@ -312,23 +312,33 @@ pub fn progress_projectiles(
 
         if proj_trans.translation.distance(projectile.dest) < 0.5 {
             projectile.hit = true;
-            for (entity, enemy_trans, mut health) in enemies.iter_mut() {
+            for (enemy_entity, enemy_trans, mut health) in enemies.iter_mut() {
                 if enemy_trans.translation.distance(proj_trans.translation)
                     < projectile.blast_radius
                 {
                     **health -= projectile.damage;
                     if **health < 0.0 {
-                        com.entity(entity).despawn_recursive();
-                        com.spawn_bundle(SceneBundle {
+                        com.entity(enemy_entity).despawn_recursive();
+                        let mut ecmds = com.spawn_bundle(SceneBundle {
                             scene: model_assets.disc.clone(),
-                            transform: proj_trans.clone(),
+                            transform: Transform::from_translation(
+                                enemy_trans.translation + Vec3::Y * 0.5,
+                            ),
                             ..Default::default()
-                        })
-                        .insert(DiscExplosion {
+                        });
+                        ecmds.insert(DiscExplosion {
                             speed: 9.0,
                             size: 4.0,
                             progress: 0.0,
                         });
+                        basic_light(
+                            &mut ecmds,
+                            Color::rgb(1.0, 0.8, 0.7),
+                            300.0,
+                            3.5,
+                            0.75,
+                            vec3(0.0, 0.6, 0.0),
+                        );
                     }
                 }
             }
@@ -360,9 +370,23 @@ pub fn progress_explosions(
 pub fn bobble_shockwave_spheres(
     time: Res<Time>,
     mut shockwave_spheres: Query<(&mut Transform, &mut ShockwaveSphere)>,
+    caps: Query<&Cap>,
 ) {
     for (mut trans, mut sh) in shockwave_spheres.iter_mut() {
-        sh.phase += time.delta_seconds();
+        let mut disable_bobble = false;
+        for cap in caps.iter() {
+            if cap.top_parent == sh.top_parent {
+                if cap.progress > 0.1 {
+                    disable_bobble = true;
+                }
+                break;
+            }
+        }
+        if disable_bobble {
+            sh.phase = 0.0;
+        } else {
+            sh.phase += time.delta_seconds();
+        }
         trans.translation = Vec3::Y * 0.7 + Vec3::Y * 0.2 * (sh.phase * 2.0).sin() as f32;
     }
 }

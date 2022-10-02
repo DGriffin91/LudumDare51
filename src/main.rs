@@ -15,7 +15,10 @@ use bevy_mod_raycast::RayCastMesh;
 
 use bevy_scene_hook::HookPlugin;
 use board::GameBoard;
-use enemies::{destroy_enemies, spawn_enemy, update_board_has_enemy, EnemyPath};
+use enemies::{
+    destroy_enemies, move_enemy_along_path, move_flying_enemy, spawn_enemy, spawn_flying_enemy,
+    update_board_has_enemy, update_enemy_paths,
+};
 use iyes_loopless::prelude::*;
 use player::{MyRaycastSet, PlayerPlugin};
 use turrets::{
@@ -92,64 +95,12 @@ fn main() {
                 .with_system(progress_explosions)
                 .with_system(bobble_shockwave_spheres)
                 .with_system(position_caps)
+                .with_system(move_flying_enemy)
+                .with_system(spawn_flying_enemy)
                 .into(),
         );
 
     app.run();
-}
-
-#[derive(Component)]
-struct PathInd;
-
-fn update_enemy_paths(
-    mut com: Commands,
-    b: Res<GameBoard>,
-    mut enemies: Query<(&Transform, &mut EnemyPath)>,
-    path_ind: Query<Entity, With<PathInd>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    for (trans, mut enemy_path) in enemies.iter_mut() {
-        enemy_path.0 = b.path(b.ws_vec3_to_ls(trans.translation));
-    }
-    for entity in &path_ind {
-        com.entity(entity).despawn_recursive();
-    }
-    if let Some((_, enemy_path)) = enemies.iter().next() {
-        for path in &enemy_path.0 {
-            for p in &path.0 {
-                com.spawn_bundle(PbrBundle {
-                    mesh: meshes.add(Mesh::from(shape::UVSphere {
-                        radius: 0.5,
-                        ..default()
-                    })),
-                    material: materials.add(Color::rgb(0.0, 0.5, 0.0).into()),
-                    transform: Transform::from_translation(
-                        b.ls_to_ws_vec3(*p) + vec3(0.0, 0.5, 0.0),
-                    ),
-                    ..default()
-                })
-                .insert(PathInd);
-            }
-        }
-    }
-}
-
-fn move_enemy_along_path(
-    time: Res<Time>,
-    b: Res<GameBoard>,
-    mut enemies: Query<(&mut Transform, &mut EnemyPath)>,
-) {
-    for (mut trans, enemy_path) in enemies.iter_mut() {
-        if let Some(path) = &enemy_path.0 {
-            let p = trans.translation;
-            let a = b.ls_to_ws_vec3(path.0[1]) + vec3(0.0, 0.5, 0.0);
-            let next_pos = a;
-            if !b.has_enemy[b.ls_to_idx(b.ws_vec3_to_ls(next_pos))] {
-                trans.translation += (next_pos - p).normalize() * time.delta_seconds() * 2.0;
-            }
-        }
-    }
 }
 
 #[derive(Component)]
@@ -186,7 +137,7 @@ fn setup(
     com.spawn_bundle(DirectionalLightBundle {
         directional_light: DirectionalLight {
             illuminance: 30000.0,
-            shadows_enabled: true,
+            //shadows_enabled: true,
             color: Color::rgb(1.0, 0.95, 0.5),
             ..default()
         },

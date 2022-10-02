@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use bevy_scene_hook::HookedSceneBundle;
 use bevy_scene_hook::SceneHook;
 
+use crate::player::PlayerState;
 use crate::{
     assets::ModelAssets,
     enemies::{Enemy, Health},
@@ -207,6 +208,7 @@ pub fn turret_fire(
     mut diamond_lasers: Query<(&mut Visibility, &DiamondLasers), Without<LaserBeam>>,
     mut laser_beams: Query<(&mut Transform, &mut Visibility, &LaserBeam), Without<DiamondLasers>>,
     mut continuous_laser_light: Query<(&Parent, &mut PointLight)>,
+    player: Res<PlayerState>,
 ) {
     for (turret_entity, turret_trans, damage, range, mut cooldown, turret) in turrets.iter_mut() {
         cooldown.tick(time.delta());
@@ -284,7 +286,7 @@ pub fn turret_fire(
                             }
                             if closest_dist < **range {
                                 //cooldown.reset(); Don't ever reset continuous
-                                health.0 -= damage.0 * time.delta_seconds();
+                                health.0 -= damage.0 * time.delta_seconds() * player.laser_upgrade;
                                 for (mut vis, laser) in diamond_lasers.iter_mut() {
                                     if laser.top_parent == turret_entity {
                                         vis.is_visible = true;
@@ -321,7 +323,7 @@ pub fn turret_fire(
                                 }
                             }
                             cooldown.reset();
-                            health.0 -= damage.0 * (1.0 / dist.max(1.0));
+                            health.0 -= damage.0 * (1.0 / dist.max(1.0)) * player.wave_upgrade;
                             let mut ecmds = com.spawn_bundle(SceneBundle {
                                 scene: model_assets.disc.clone(),
                                 transform: Transform::from_translation(
@@ -415,6 +417,7 @@ pub fn progress_projectiles(
     mut projectiles: Query<(Entity, &mut Transform, &mut Projectile), Without<Enemy>>,
     mut enemies: Query<(&Transform, &mut Health), With<Enemy>>,
     model_assets: Res<ModelAssets>,
+    player: Res<PlayerState>,
 ) {
     for (proj_entity, mut proj_trans, mut projectile) in projectiles.iter_mut() {
         proj_trans.translation += projectile.dir * projectile.speed;
@@ -425,7 +428,7 @@ pub fn progress_projectiles(
                 if enemy_trans.translation.distance(proj_trans.translation)
                     < projectile.blast_radius
                 {
-                    **health -= projectile.damage;
+                    **health -= projectile.damage * player.wave_upgrade;
                     if **health < 0.0 {
                         let mut ecmds = com.spawn_bundle(SceneBundle {
                             scene: model_assets.disc.clone(),

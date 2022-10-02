@@ -47,12 +47,35 @@ fn ui_sidebar(
             ] {
                 if select_button(ui, message, player.turret_to_place == Some(turret)) {
                     player.turret_to_place = Some(turret);
+                    player.sell_mode = false;
                 }
             }
             if select_button(ui, "SELL", player.sell_mode) {
                 player.sell_mode = !player.sell_mode;
                 if player.sell_mode {
                     player.turret_to_place = None;
+                }
+            }
+            ui.label("--- UPGRADES ---");
+            let cost = (player.blaster_upgrade.powi(2) * 10.0) as u64;
+            if ui.button(&format!("BLASTER {}", cost)).clicked() {
+                if player.credits > cost {
+                    player.blaster_upgrade *= 1.5;
+                    player.credits -= cost;
+                }
+            }
+            let cost = (player.wave_upgrade.powi(2) * 10.0) as u64;
+            if ui.button(&format!("WAVE {}", cost)).clicked() {
+                if player.credits > cost {
+                    player.wave_upgrade *= 1.5;
+                    player.credits -= cost;
+                }
+            }
+            let cost = (player.laser_upgrade.powi(2) * 10.0) as u64;
+            if ui.button(&format!("LASERS {}", cost)).clicked() {
+                if player.credits > cost {
+                    player.laser_upgrade *= 1.5;
+                    player.credits -= cost;
                 }
             }
         });

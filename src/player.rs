@@ -15,6 +15,9 @@ pub struct PlayerState {
     pub kills: u64,
     pub health: f32,
     pub sell_mode: bool,
+    pub blaster_upgrade: f32,
+    pub laser_upgrade: f32,
+    pub wave_upgrade: f32,
 }
 
 pub struct PlayerPlugin;
@@ -27,6 +30,9 @@ impl Plugin for PlayerPlugin {
                 kills: 0,
                 health: 1.0,
                 sell_mode: false,
+                blaster_upgrade: 1.0,
+                laser_upgrade: 1.0,
+                wave_upgrade: 1.0,
             })
             .add_enter_system(GameState::RunLevel, setup)
             .add_system_set(

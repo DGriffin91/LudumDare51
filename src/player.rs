@@ -18,6 +18,22 @@ pub struct PlayerState {
     pub blaster_upgrade: f32,
     pub laser_upgrade: f32,
     pub wave_upgrade: f32,
+    pub level_time: f32,
+    pub level: f32,
+}
+
+impl PlayerState {
+    pub fn enemy_speed_boost(&self) -> f32 {
+        self.level.powf(0.5) * 0.1
+    }
+
+    pub fn spawn_rate_cut(&self) -> f32 {
+        self.level.powf(0.6) * 0.1
+    }
+
+    pub fn enemy_health_mult(&self) -> f32 {
+        (self.level + 1.0) / 2.0
+    }
 }
 
 pub struct PlayerPlugin;
@@ -25,7 +41,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugin(DefaultRaycastingPlugin::<MyRaycastSet>::default())
             .insert_resource(PlayerState {
-                credits: 5000,
+                credits: 1000,
                 turret_to_place: None,
                 kills: 0,
                 health: 1.0,
@@ -33,6 +49,8 @@ impl Plugin for PlayerPlugin {
                 blaster_upgrade: 1.0,
                 laser_upgrade: 1.0,
                 wave_upgrade: 1.0,
+                level_time: 0.0,
+                level: 0.0,
             })
             .add_enter_system(GameState::RunLevel, setup)
             .add_system_set(
@@ -40,6 +58,7 @@ impl Plugin for PlayerPlugin {
                     .run_in_state(GameState::RunLevel)
                     .after("pre")
                     .with_system(mouse_interact)
+                    .with_system(set_level)
                     .into(),
             )
             .add_system_to_stage(
@@ -50,6 +69,11 @@ impl Plugin for PlayerPlugin {
         //.add_plugin(DebugCursorPickingPlugin)
         //.add_plugin(DebugEventsPickingPlugin)
     }
+}
+
+fn set_level(time: Res<Time>, mut player: ResMut<PlayerState>) {
+    player.level_time += time.delta_seconds();
+    player.level = (player.level_time / 10.0).floor();
 }
 
 fn setup(

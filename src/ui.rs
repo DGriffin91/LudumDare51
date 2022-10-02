@@ -37,15 +37,25 @@ fn ui_sidebar(
         .min_width(window.width() * 0.17)
         .default_width(window.width() * 0.17)
         .show(egui_context.ctx_mut(), |ui| {
+            ui.label(&format!("LEVEL {}", player.level as u32));
+            let v = 1.0 - (player.level_time * 0.1 - player.level).fract();
+            ui.label(&format!("NEXT LEVEL IN {:.2}", v * 10.0));
+            ui.label("");
             ui.label(&format!("{} HEALTH", (player.health * 100.0) as u32));
             ui.label(&format!("{} CREDITS", player.credits));
             ui.label(&format!("{} KILLS", player.kills));
+            ui.label("");
+            ui.label("TURRETS");
             for (message, turret) in [
-                ("BLASTER TURRET", Turret::Laser),
-                ("WAVE TURRET", Turret::Shockwave),
-                ("LASER TURRET", Turret::LaserContinuous),
+                ("BLASTER", Turret::Laser),
+                ("WAVE", Turret::Shockwave),
+                ("LASER", Turret::LaserContinuous),
             ] {
-                if select_button(ui, message, player.turret_to_place == Some(turret)) {
+                if select_button(
+                    ui,
+                    &format!("{} {}", message, turret.cost()),
+                    player.turret_to_place == Some(turret),
+                ) {
                     player.turret_to_place = Some(turret);
                     player.sell_mode = false;
                 }
@@ -56,20 +66,21 @@ fn ui_sidebar(
                     player.turret_to_place = None;
                 }
             }
-            ui.label("--- UPGRADES ---");
+            ui.label("");
+            ui.label("UPGRADES +10%");
             let cost = (player.blaster_upgrade.powi(2) * 10.0) as u64;
             if ui.button(&format!("BLASTER {}", cost)).clicked() && player.credits > cost {
-                player.blaster_upgrade *= 1.5;
+                player.blaster_upgrade *= 1.1;
                 player.credits -= cost;
             }
             let cost = (player.wave_upgrade.powi(2) * 10.0) as u64;
             if ui.button(&format!("WAVE {}", cost)).clicked() && player.credits > cost {
-                player.wave_upgrade *= 1.5;
+                player.wave_upgrade *= 1.1;
                 player.credits -= cost;
             }
             let cost = (player.laser_upgrade.powi(2) * 10.0) as u64;
             if ui.button(&format!("LASERS {}", cost)).clicked() && player.credits > cost {
-                player.laser_upgrade *= 1.5;
+                player.laser_upgrade *= 1.1;
                 player.credits -= cost;
             }
         });
@@ -79,8 +90,7 @@ pub fn setup_fonts(mut egui_context: ResMut<EguiContext>) {
     let mut fonts = FontDefinitions::default();
 
     for (_text_style, data) in fonts.font_data.iter_mut() {
-        data.tweak.scale = 2.0;
-        //*size = 25.0;
+        data.tweak.scale = 1.5;
     }
     egui_context.ctx_mut().set_fonts(fonts);
 }

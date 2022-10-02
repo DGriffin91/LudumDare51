@@ -281,7 +281,7 @@ pub fn turret_fire(
                             }
                             for (parent, mut light) in continuous_laser_light.iter_mut() {
                                 if parent.get() == turret_entity {
-                                    light.intensity = 100.0;
+                                    light.intensity = 90.0;
                                 }
                             }
                             if closest_dist < **range {

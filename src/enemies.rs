@@ -30,16 +30,22 @@ pub fn spawn_rolling_enemy(
     mut last_spawn: Local<f32>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
+    player: Res<PlayerState>,
 ) {
+    if player.level < 10.0 {
+        return;
+    }
     let since_startup = time.seconds_since_startup() as f32;
-    if since_startup - *last_spawn > 3.0 {
+    if since_startup - *last_spawn > (3.0 - player.spawn_rate_cut()).max(1.0) {
         *last_spawn = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
             .insert(EnemyPath(None))
-            .insert(Health(1.0))
-            .insert(Enemy { speed: 2.0 });
+            .insert(Health(1.2 * player.enemy_health_mult()))
+            .insert(Enemy {
+                speed: 2.0 + player.enemy_speed_boost(),
+            });
 
         basic_light(
             &mut ecmds,
@@ -67,16 +73,22 @@ pub fn spawn_rolling_enemy2(
     mut last_spawn: Local<f32>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
+    player: Res<PlayerState>,
 ) {
+    if player.level < 1.0 {
+        return;
+    }
     let since_startup = time.seconds_since_startup() as f32;
-    if since_startup - *last_spawn > 2.0 {
+    if since_startup - *last_spawn > (2.0 - player.spawn_rate_cut()).max(0.7) {
         *last_spawn = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
             .insert(EnemyPath(None))
-            .insert(Health(0.7))
-            .insert(Enemy { speed: 3.0 });
+            .insert(Health(0.6 * player.enemy_health_mult()))
+            .insert(Enemy {
+                speed: 3.0 + player.enemy_speed_boost(),
+            });
 
         basic_light(
             &mut ecmds,
@@ -104,15 +116,21 @@ pub fn spawn_flying_enemy(
     mut last_spawn: Local<f32>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
+    player: Res<PlayerState>,
 ) {
+    if player.level < 20.0 {
+        return;
+    }
     let since_startup = time.seconds_since_startup() as f32;
-    if since_startup - *last_spawn > 1.0 {
+    if since_startup - *last_spawn > (3.0 - player.spawn_rate_cut()).max(0.2) {
         *last_spawn = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
-            .insert(Health(0.5))
-            .insert(Enemy { speed: 4.0 })
+            .insert(Health(0.4 * player.enemy_health_mult()))
+            .insert(Enemy {
+                speed: 4.0 + player.enemy_speed_boost(),
+            })
             .insert(FlyingEnemy {
                 dest: b.ls_to_ws_vec3(b.dest),
             });
@@ -145,7 +163,7 @@ pub fn destroy_enemies(
     for (entity, health) in enemies.iter() {
         if health.0 < 0.0 {
             com.entity(entity).despawn_recursive();
-            player.credits += 100; //100 credits per kill
+            player.credits += 50;
             player.kills += 1;
         }
     }

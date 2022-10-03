@@ -10,6 +10,8 @@ use crate::board::GameBoard;
 use crate::enemies::Enemy;
 use crate::spawn_main_base;
 use crate::turrets::Projectile;
+use crate::GameTime;
+use crate::MainBase;
 use crate::MainBaseDestroyed;
 use crate::{player::PlayerState, turrets::Turret};
 
@@ -46,6 +48,7 @@ fn ui_sidebar(
     mut player: ResMut<PlayerState>,
     mut windows: ResMut<Windows>,
     mut restart: EventWriter<RestartEvent>,
+    mut time: ResMut<GameTime>,
 ) {
     let window = windows.get_primary_mut().unwrap();
     egui::SidePanel::right("right_panel")
@@ -95,26 +98,43 @@ fn ui_sidebar(
                         }
                     }
                     ui.label("");
-                    ui.label("UPGRADES +10%");
-                    let cost = (player.blaster_upgrade.powi(2) * 10.0) as u64;
+                    ui.label("UPGRADES +5%");
+                    let cost = (player.blaster_upgrade.powi(2) * 25.0) as u64;
                     if ui.button(&format!("BLASTER {:8}", cost)).clicked() && player.credits > cost
                     {
-                        player.blaster_upgrade *= 1.1;
+                        player.blaster_upgrade *= 1.05;
                         player.credits -= cost;
                     }
-                    let cost = (player.wave_upgrade.powi(2) * 10.0) as u64;
+                    let cost = (player.wave_upgrade.powi(2) * 25.0) as u64;
                     if ui.button(&format!("WAVE    {:8}", cost)).clicked() && player.credits > cost
                     {
-                        player.wave_upgrade *= 1.1;
+                        player.wave_upgrade *= 1.05;
                         player.credits -= cost;
                     }
-                    let cost = (player.laser_upgrade.powi(2) * 10.0) as u64;
+                    let cost = (player.laser_upgrade.powi(2) * 25.0) as u64;
                     if ui.button(&format!("LASERS  {:8}", cost)).clicked() && player.credits > cost
                     {
-                        player.laser_upgrade *= 1.1;
+                        player.laser_upgrade *= 1.05;
                         player.credits -= cost;
                     }
-                } else if ui.button("RESTART").clicked() {
+                    ui.label("");
+
+                    ui.label(&format!("TIME {:.2}", time.seconds_since_startup));
+                    ui.label(&format!("GAME SPEED {:.2}", time.time_multiplier));
+                    ui.horizontal(|ui| {
+                        if ui.button("PAUSE").clicked() {
+                            time.pause = !time.pause;
+                        }
+                        if ui.button(" -- ").clicked() {
+                            time.time_multiplier = (time.time_multiplier - 0.1).max(0.0);
+                        }
+                        if ui.button(" ++ ").clicked() {
+                            time.time_multiplier += 0.1;
+                        }
+                    });
+                }
+                ui.label("");
+                if ui.button("RESTART GAME").clicked() {
                     restart.send(RestartEvent);
                 }
             });
@@ -132,7 +152,7 @@ pub fn setup_fonts(mut egui_context: ResMut<EguiContext>) {
     egui_context.ctx_mut().set_fonts(fonts);
 }
 
-struct RestartEvent;
+pub struct RestartEvent;
 
 fn restart_game(
     mut com: Commands,
@@ -141,9 +161,11 @@ fn restart_game(
     mut b: ResMut<GameBoard>,
     model_assets: Res<ModelAssets>,
     old_base: Query<Entity, With<MainBaseDestroyed>>,
+    new_base: Query<Entity, With<MainBase>>,
     enemies: Query<Entity, With<Enemy>>,
     towers: Query<Entity, With<Turret>>,
     projectiles: Query<Entity, With<Projectile>>,
+    mut time: ResMut<GameTime>,
 ) {
     let mut restart = false;
     for _ in restart_events.iter() {
@@ -151,6 +173,9 @@ fn restart_game(
     }
     if restart {
         for e in old_base.iter() {
+            com.entity(e).despawn_recursive();
+        }
+        for e in new_base.iter() {
             com.entity(e).despawn_recursive();
         }
         for e in enemies.iter() {
@@ -165,5 +190,6 @@ fn restart_game(
         *b = GameBoard::default();
         *player = PlayerState::default();
         spawn_main_base(&mut com, &model_assets, &b);
+        *time = GameTime::default();
     }
 }

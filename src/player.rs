@@ -7,7 +7,27 @@ use crate::{
     assets::{GameState, ModelAssets},
     board::GameBoard,
     turrets::Turret,
+    GameTime,
 };
+
+pub struct GameSettings {
+    pub rolling_enemy_health: f32,
+    pub rolling_enemy_speed: f32,
+    pub rolling_enemy_spawn_speed: f32,
+    pub rolling_enemy_max_spawn_speed: f32,
+    //
+    pub rolling_enemy_2_health: f32,
+    pub rolling_enemy_2_speed: f32,
+    pub rolling_enemy_2_spawn_speed: f32,
+    pub rolling_enemy_2_max_spawn_speed: f32,
+    //
+    pub flying_enemy_health: f32,
+    pub flying_enemy_speed: f32,
+    pub flying_enemy_spawn_speed: f32,
+    pub flying_enemy_max_spawn_speed: f32,
+    //
+    pub credits_for_kill: u64,
+}
 
 pub struct PlayerState {
     pub credits: u64,
@@ -22,24 +42,47 @@ pub struct PlayerState {
     pub level: f32,
 }
 
+pub const GAMESETTINGS: GameSettings = GameSettings {
+    rolling_enemy_health: 0.5,
+    rolling_enemy_speed: 0.6,
+    rolling_enemy_spawn_speed: 3.0,
+    rolling_enemy_max_spawn_speed: 1.2,
+    //
+    rolling_enemy_2_health: 0.28,
+    rolling_enemy_2_speed: 1.2,
+    rolling_enemy_2_spawn_speed: 3.5,
+    rolling_enemy_2_max_spawn_speed: 1.1,
+    //
+    flying_enemy_health: 0.08,
+    flying_enemy_speed: 2.0,
+    flying_enemy_spawn_speed: 3.0,
+    flying_enemy_max_spawn_speed: 0.2,
+    //
+    credits_for_kill: 25,
+};
+
 impl PlayerState {
     pub fn enemy_speed_boost(&self) -> f32 {
-        self.level.powf(0.5) * 0.1
+        self.level.powf(0.4) * 0.1
     }
 
     pub fn spawn_rate_cut(&self) -> f32 {
-        self.level.powf(0.6) * 0.5
+        self.level.powf(0.4) * 0.3
     }
 
     pub fn enemy_health_mult(&self) -> f32 {
-        (self.level + 1.0) / 2.0
+        if self.level < 50.0 {
+            (self.level.powf(1.32) + 1.0) / 2.0
+        } else {
+            (self.level.powf(1.32) + 1.0) / (2.0 - (self.level - 50.0) * 0.5).max(1.0)
+        }
     }
 }
 
 impl Default for PlayerState {
     fn default() -> Self {
         PlayerState {
-            credits: 1000,
+            credits: 500,
             turret_to_place: None,
             kills: 0,
             health: 1.0,
@@ -77,9 +120,9 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn set_level(time: Res<Time>, mut player: ResMut<PlayerState>) {
+fn set_level(time: ResMut<GameTime>, mut player: ResMut<PlayerState>) {
     if player.health > 0.0 {
-        player.level_time += time.delta_seconds();
+        player.level_time += time.delta_seconds;
         player.level = (player.level_time / 10.0).floor();
     }
 }

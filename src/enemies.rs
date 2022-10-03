@@ -4,8 +4,10 @@ use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 use crate::{
     assets::ModelAssets,
     board::GameBoard,
-    player::PlayerState,
+    player::{PlayerState, GAMESETTINGS},
     turrets::{basic_light, DiscExplosion},
+    ui::RestartEvent,
+    GameTime,
 };
 
 use rand::Rng;
@@ -30,33 +32,45 @@ pub struct FlyingEnemy {
 }
 
 pub fn spawn_rolling_enemy(
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     mut com: Commands,
     mut last_spawn: Local<f32>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
+    mut restart_events: EventReader<RestartEvent>,
 ) {
-    if player.level < 10.0 || player.health < 0.0 {
+    for _ in restart_events.iter() {
+        *last_spawn = 0.0;
+    }
+    if player.level < 20.0 || player.health < 0.0 {
         return;
     }
-    let since_startup = time.seconds_since_startup() as f32;
-    if since_startup - *last_spawn > (3.0 - player.spawn_rate_cut()).max(1.0) {
+    if b.has_enemy[0] {
+        return;
+    }
+    let since_startup = time.seconds_since_startup as f32;
+    if since_startup - *last_spawn
+        > (GAMESETTINGS.rolling_enemy_spawn_speed - player.spawn_rate_cut())
+            .max(GAMESETTINGS.rolling_enemy_max_spawn_speed)
+    {
         *last_spawn = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
             .insert(EnemyPath::default())
-            .insert(Health(1.2 * player.enemy_health_mult()))
+            .insert(Health(
+                GAMESETTINGS.rolling_enemy_health * player.enemy_health_mult(),
+            ))
             .insert(Enemy {
-                speed: 2.0 + player.enemy_speed_boost(),
+                speed: GAMESETTINGS.rolling_enemy_speed + player.enemy_speed_boost(),
             });
 
         basic_light(
             &mut ecmds,
             Color::rgb(1.0, 0.1, 0.1),
             30.0,
-            2.0,
+            1.5,
             0.5,
             vec3(0.0, 0.4, -0.5),
         );
@@ -73,33 +87,45 @@ pub fn spawn_rolling_enemy(
 }
 
 pub fn spawn_rolling_enemy2(
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     mut com: Commands,
     mut last_spawn: Local<f32>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
+    mut restart_events: EventReader<RestartEvent>,
 ) {
+    for _ in restart_events.iter() {
+        *last_spawn = 0.0;
+    }
     if player.level < 1.0 || player.health < 0.0 {
         return;
     }
-    let since_startup = time.seconds_since_startup() as f32;
-    if since_startup - *last_spawn > (2.0 - player.spawn_rate_cut()).max(0.7) {
+    if b.has_enemy[0] {
+        return;
+    }
+    let since_startup = time.seconds_since_startup as f32;
+    if since_startup - *last_spawn
+        > (GAMESETTINGS.rolling_enemy_2_spawn_speed - player.spawn_rate_cut())
+            .max(GAMESETTINGS.rolling_enemy_2_max_spawn_speed)
+    {
         *last_spawn = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
             .insert(EnemyPath::default())
-            .insert(Health(0.6 * player.enemy_health_mult()))
+            .insert(Health(
+                GAMESETTINGS.rolling_enemy_2_health * player.enemy_health_mult(),
+            ))
             .insert(Enemy {
-                speed: 3.0 + player.enemy_speed_boost(),
+                speed: GAMESETTINGS.rolling_enemy_2_speed + player.enemy_speed_boost(),
             });
 
         basic_light(
             &mut ecmds,
             Color::rgb(1.0, 0.1, 0.3),
             30.0,
-            2.0,
+            1.5,
             0.5,
             vec3(0.0, 0.4, -0.5),
         );
@@ -116,25 +142,37 @@ pub fn spawn_rolling_enemy2(
 }
 
 pub fn spawn_flying_enemy(
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     mut com: Commands,
     mut last_spawn: Local<f32>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
+    mut restart_events: EventReader<RestartEvent>,
 ) {
-    if player.level < 20.0 || player.health < 0.0 {
+    for _ in restart_events.iter() {
+        *last_spawn = 0.0;
+    }
+    if player.level < 10.0 || player.health < 0.0 {
         return;
     }
-    let since_startup = time.seconds_since_startup() as f32;
-    if since_startup - *last_spawn > (3.0 - player.spawn_rate_cut()).max(0.2) {
+    if b.has_enemy[0] {
+        return;
+    }
+    let since_startup = time.seconds_since_startup as f32;
+    if since_startup - *last_spawn
+        > (GAMESETTINGS.flying_enemy_spawn_speed - player.spawn_rate_cut())
+            .max(GAMESETTINGS.flying_enemy_max_spawn_speed)
+    {
         *last_spawn = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
-            .insert(Health(0.4 * player.enemy_health_mult()))
+            .insert(Health(
+                GAMESETTINGS.flying_enemy_health * player.enemy_health_mult(),
+            ))
             .insert(Enemy {
-                speed: 4.0 + player.enemy_speed_boost(),
+                speed: GAMESETTINGS.flying_enemy_speed + player.enemy_speed_boost(),
             })
             .insert(FlyingEnemy {
                 dest: b.ls_to_ws_vec3(b.dest),
@@ -145,7 +183,7 @@ pub fn spawn_flying_enemy(
             &mut ecmds,
             Color::rgb(1.0, 0.1, 0.1),
             200.0,
-            3.5,
+            2.5,
             0.2,
             vec3(0.0, 0.3, -0.2),
         );
@@ -180,7 +218,7 @@ pub fn destroy_enemies(
     for (entity, health) in enemies.iter() {
         if health.0 < 0.0 {
             com.entity(entity).despawn_recursive();
-            player.credits += 50;
+            player.credits += GAMESETTINGS.credits_for_kill;
             player.kills += 1;
         }
     }
@@ -201,7 +239,7 @@ pub fn update_enemy_paths(
     b: Res<GameBoard>,
     mut enemies: Query<(&Transform, &mut EnemyPath)>,
     player: Res<PlayerState>,
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     //mut com: Commands,
     //path_ind: Query<Entity, With<PathInd>>,
     //mut meshes: ResMut<Assets<Mesh>>,
@@ -210,7 +248,7 @@ pub fn update_enemy_paths(
     if player.health < 0.0 {
         let mut rng = rand::thread_rng();
         for (trans, mut enemy_path) in enemies.iter_mut() {
-            enemy_path.new_rand_loc_timer -= time.delta_seconds();
+            enemy_path.new_rand_loc_timer -= time.delta_seconds;
             if enemy_path.new_rand_loc_timer < 0.0 {
                 enemy_path.new_rand_loc_timer += rng.gen_range(4.0..6.0);
                 let rnd = vec3(
@@ -256,7 +294,7 @@ pub fn update_enemy_paths(
 
 pub fn move_enemy_along_path(
     mut com: Commands,
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     b: Res<GameBoard>,
     mut enemies: Query<(Entity, &mut Transform, &mut EnemyPath, &Enemy)>,
     mut player: ResMut<PlayerState>,
@@ -270,7 +308,7 @@ pub fn move_enemy_along_path(
                 let next_pos = a;
                 if !b.has_enemy[b.ls_to_idx(b.ws_vec3_to_ls(next_pos))] {
                     enemy_trans.translation +=
-                        (next_pos - p).normalize() * time.delta_seconds() * enemy.speed;
+                        (next_pos - p).normalize() * time.delta_seconds * enemy.speed;
                 }
                 enemy_trans.look_at(next_pos, Vec3::Y);
             }
@@ -291,7 +329,7 @@ pub fn move_enemy_along_path(
                     &mut ecmds,
                     Color::rgb(1.0, 0.8, 0.7),
                     300.0,
-                    4.5,
+                    3.5,
                     0.75,
                     vec3(0.0, 1.6, 0.0),
                 );
@@ -301,7 +339,7 @@ pub fn move_enemy_along_path(
 }
 
 pub fn move_flying_enemy(
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     mut com: Commands,
     mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
     mut player: ResMut<PlayerState>,
@@ -311,7 +349,7 @@ pub fn move_flying_enemy(
     if player.health < 0.0 {
         let mut rng = rand::thread_rng();
         for (_enemy_entity, mut _enemy_trans, mut fly_enemy, _enemy) in enemies.iter_mut() {
-            fly_enemy.new_rand_loc_timer -= time.delta_seconds();
+            fly_enemy.new_rand_loc_timer -= time.delta_seconds;
             if fly_enemy.new_rand_loc_timer < 0.0 {
                 fly_enemy.new_rand_loc_timer += rng.gen_range(1.0..5.0);
                 let rnd = vec3(
@@ -326,7 +364,7 @@ pub fn move_flying_enemy(
     for (enemy_entity, mut enemy_trans, fly_enemy, enemy) in enemies.iter_mut() {
         enemy_trans.look_at(fly_enemy.dest, Vec3::Y);
         let dir = (fly_enemy.dest - enemy_trans.translation).normalize();
-        enemy_trans.translation += dir * enemy.speed * time.delta_seconds();
+        enemy_trans.translation += dir * enemy.speed * time.delta_seconds;
         if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 0.5 {
             player.health -= 0.05;
             com.entity(enemy_entity).despawn_recursive();
@@ -344,7 +382,7 @@ pub fn move_flying_enemy(
                 &mut ecmds,
                 Color::rgb(1.0, 0.8, 0.7),
                 300.0,
-                4.5,
+                3.5,
                 0.75,
                 vec3(0.0, 1.6, 0.0),
             );

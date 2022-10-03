@@ -8,6 +8,7 @@ use bevy_scene_hook::HookedSceneBundle;
 use bevy_scene_hook::SceneHook;
 
 use crate::player::PlayerState;
+use crate::GameTime;
 use crate::{
     assets::ModelAssets,
     enemies::{Enemy, Health},
@@ -57,8 +58,8 @@ impl Turret {
             &mut ecmds,
             Color::rgb(1.0, 0.2, 1.0),
             200.0,
-            3.0,
-            0.75,
+            2.5,
+            0.5,
             vec3(0.0, 0.6, 0.0),
         );
 
@@ -107,14 +108,14 @@ impl Turret {
         ecmds
             .insert(AttackDamage(0.02))
             .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.5), true)))
-            .insert(Range(18.0))
+            .insert(Range(10.0))
             .insert(Turret::Laser);
         basic_light(
             &mut ecmds,
             Color::rgb(0.3, 0.0, 1.0),
             110.0,
-            3.0,
-            0.75,
+            2.5,
+            0.5,
             vec3(0.0, 1.0, 0.0),
         );
 
@@ -146,16 +147,16 @@ impl Turret {
         let mut ecmds = com.spawn();
         let entity_id = ecmds.id();
         ecmds
-            .insert(AttackDamage(0.1))
+            .insert(AttackDamage(0.35))
             .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.1), false)))
-            .insert(Range(12.0))
+            .insert(Range(16.0))
             .insert(Turret::LaserContinuous);
         basic_light(
             &mut ecmds,
             Color::hex("68FF72").unwrap(),
             110.0,
-            3.0,
-            0.75,
+            2.5,
+            0.5,
             vec3(0.0, 1.0, 0.0),
         );
 
@@ -187,7 +188,7 @@ impl Turret {
 
 pub fn turret_fire(
     mut com: Commands,
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     mut turrets: Query<
         (
             Entity,
@@ -225,7 +226,7 @@ pub fn turret_fire(
     }
 
     for (turret_entity, turret_trans, damage, range, mut cooldown, turret) in turrets.iter_mut() {
-        cooldown.tick(time.delta());
+        cooldown.tick(time.delta);
 
         let mut closest = None;
         let mut closest_dist = INFINITY;
@@ -271,7 +272,7 @@ pub fn turret_fire(
                                     &mut ecmds,
                                     Color::rgb(0.2, 0.0, 1.0),
                                     100.0,
-                                    2.0,
+                                    1.5,
                                     1.0,
                                     Vec3::Y * -0.5,
                                 );
@@ -284,7 +285,7 @@ pub fn turret_fire(
                         if let Ok((_entity, enemy_trans, mut health)) = enemies.get_mut(entity) {
                             if closest_dist < **range {
                                 //cooldown.reset(); Don't ever reset continuous
-                                health.0 -= damage.0 * time.delta_seconds() * player.laser_upgrade;
+                                health.0 -= damage.0 * time.delta_seconds * player.laser_upgrade;
                                 for (mut vis, laser) in diamond_lasers.iter_mut() {
                                     if laser.top_parent == turret_entity {
                                         vis.is_visible = true;
@@ -338,7 +339,7 @@ pub fn turret_fire(
                                 &mut ecmds,
                                 Color::rgb(1.0, 0.0, 1.0),
                                 70.0,
-                                4.5,
+                                3.5,
                                 1.0,
                                 Vec3::Y,
                             );
@@ -413,7 +414,7 @@ pub fn laser_point_at_enemy(
 }
 
 pub fn progress_projectiles(
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     mut com: Commands,
     mut projectiles: Query<(Entity, &mut Transform, &mut Projectile), Without<Enemy>>,
     mut enemies: Query<(&Transform, &mut Health), With<Enemy>>,
@@ -423,7 +424,7 @@ pub fn progress_projectiles(
     for (proj_entity, mut proj_trans, mut projectile) in projectiles.iter_mut() {
         proj_trans.translation += projectile.dir * projectile.speed;
 
-        if proj_trans.translation.distance(projectile.dest) < 0.5 {
+        if proj_trans.translation.distance(projectile.dest) < 0.8 {
             projectile.hit = true;
             for (enemy_trans, mut health) in enemies.iter_mut() {
                 if enemy_trans.translation.distance(proj_trans.translation)
@@ -447,7 +448,7 @@ pub fn progress_projectiles(
                             &mut ecmds,
                             Color::rgb(1.0, 0.8, 0.7),
                             300.0,
-                            3.5,
+                            3.0,
                             0.75,
                             vec3(0.0, 0.6, 0.0),
                         );
@@ -456,7 +457,7 @@ pub fn progress_projectiles(
             }
         }
         if projectile.hit {
-            projectile.hit_despawn_countdown -= time.delta_seconds();
+            projectile.hit_despawn_countdown -= time.delta_seconds;
         }
         if projectile.hit_despawn_countdown < 0.0 {
             com.entity(proj_entity).despawn_recursive();
@@ -465,12 +466,12 @@ pub fn progress_projectiles(
 }
 
 pub fn progress_explosions(
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     mut com: Commands,
     mut explosions: Query<(Entity, &mut Transform, &mut DiscExplosion)>,
 ) {
     for (entity, mut trans, mut explosion) in explosions.iter_mut() {
-        explosion.progress += time.delta_seconds() * explosion.speed;
+        explosion.progress += time.delta_seconds * explosion.speed;
         if explosion.progress >= 1.0 {
             com.entity(entity).despawn_recursive();
         } else {
@@ -480,7 +481,7 @@ pub fn progress_explosions(
 }
 
 pub fn bobble_shockwave_spheres(
-    time: Res<Time>,
+    time: ResMut<GameTime>,
     mut shockwave_spheres: Query<(&mut Transform, &mut ShockwaveSphere)>,
     caps: Query<&Cap>,
 ) {
@@ -497,14 +498,14 @@ pub fn bobble_shockwave_spheres(
         if disable_bobble {
             sh.phase = 0.0;
         } else {
-            sh.phase += time.delta_seconds();
+            sh.phase += time.delta_seconds;
         }
         trans.translation = Vec3::Y * 0.7 + Vec3::Y * 0.2 * (sh.phase * 2.0).sin() as f32;
     }
 }
 
-pub fn position_caps(time: Res<Time>, mut caps: Query<(&mut Transform, &mut Cap)>) {
-    let delta_sec = time.delta_seconds();
+pub fn position_caps(time: ResMut<GameTime>, mut caps: Query<(&mut Transform, &mut Cap)>) {
+    let delta_sec = time.delta_seconds;
     for (mut trans, mut cap) in caps.iter_mut() {
         cap.progress = (cap.progress - delta_sec * 2.0).max(0.0);
         trans.translation = cap.direction * cap.progress;

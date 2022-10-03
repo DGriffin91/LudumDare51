@@ -1416,6 +1416,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "decaphase"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy-scene-hook",
+ "bevy-web-resizer",
+ "bevy_asset_loader",
+ "bevy_egui",
+ "bevy_kira_audio",
+ "bevy_mod_picking",
+ "bevy_mod_raycast",
+ "iyes_loopless",
+ "pathfinding",
+ "rand",
+]
+
+[[package]]
 name = "deflate"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3364,23 +3381,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d82e1a7758622a465f8cee077614c73484dac5b836c02ff6a40d5d1010324d7"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "tower"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy-scene-hook",
- "bevy-web-resizer",
- "bevy_asset_loader",
- "bevy_egui",
- "bevy_kira_audio",
- "bevy_mod_picking",
- "bevy_mod_raycast",
- "iyes_loopless",
- "pathfinding",
- "rand",
 ]
 
 [[package]]

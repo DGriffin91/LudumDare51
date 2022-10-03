@@ -57,14 +57,17 @@ fn ui_sidebar(
         .default_width(window.width() * 0.17)
         .show(egui_context.ctx_mut(), |ui| {
             ui.vertical_centered_justified(|ui| {
-                if ui.button("CREDITS").clicked() {
-                    player.credits += 1000;
-                }
-                if ui.button("HEALTH").clicked() {
-                    player.health += 1000.0;
-                }
-                if ui.button("NEXT LEVEL").clicked() {
-                    player.level_time += 10.0;
+                #[cfg(debug_assertions)]
+                {
+                    if ui.button("CREDITS").clicked() {
+                        player.credits += 1000;
+                    }
+                    if ui.button("HEALTH").clicked() {
+                        player.health += 1000.0;
+                    }
+                    if ui.button("NEXT LEVEL").clicked() {
+                        player.level_time += 10.0;
+                    }
                 }
                 ui.label(&format!("LEVEL {}", player.level as u32));
                 let v = 1.0 - (player.level_time * 0.1 - player.level).fract();

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
+use bevy_kira_audio::AudioSource;
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum GameState {
@@ -44,4 +45,42 @@ pub struct ModelAssets {
     pub disc: Handle<Scene>,
     #[asset(path = "models/misc/board.glb#Scene0")]
     pub board: Handle<Scene>,
+}
+
+#[derive(AssetCollection)]
+pub struct AudioAssets {
+    // --- Units ---
+    #[asset(path = "audio/units/laser1.flac")]
+    pub laser1: Handle<AudioSource>,
+    #[asset(path = "audio/units/laser2.flac")]
+    pub laser2: Handle<AudioSource>,
+    #[asset(path = "audio/units/laser3.flac")]
+    pub laser3: Handle<AudioSource>,
+    #[asset(path = "audio/units/laser4.flac")]
+    pub laser4: Handle<AudioSource>,
+
+    #[asset(path = "audio/units/wave1.flac")]
+    pub wave1: Handle<AudioSource>,
+    #[asset(path = "audio/units/wave2.flac")]
+    pub wave2: Handle<AudioSource>,
+    #[asset(path = "audio/units/wave3.flac")]
+    pub wave3: Handle<AudioSource>,
+    #[asset(path = "audio/units/wave4.flac")]
+    pub wave4: Handle<AudioSource>,
+
+    #[asset(path = "audio/units/exp1.flac")]
+    pub exp1: Handle<AudioSource>,
+    #[asset(path = "audio/units/exp2.flac")]
+    pub exp2: Handle<AudioSource>,
+    #[asset(path = "audio/units/exp3.flac")]
+    pub exp3: Handle<AudioSource>,
+    #[asset(path = "audio/units/exp4.flac")]
+    pub exp4: Handle<AudioSource>,
+    #[asset(path = "audio/units/exp5.flac")]
+    pub exp5: Handle<AudioSource>,
+    #[asset(path = "audio/units/exp6.flac")]
+    pub exp6: Handle<AudioSource>,
+
+    #[asset(path = "audio/units/con_laser.flac")]
+    pub con_laser: Handle<AudioSource>,
 }

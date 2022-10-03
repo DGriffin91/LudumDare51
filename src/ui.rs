@@ -84,10 +84,12 @@ fn ui_sidebar(
                         player.level_time += 10.0;
                     }
                 }
-                ui.label(&format!("LEVEL {}", player.level as u32));
                 let v = 1.0 - (player.level_time * 0.1 - player.level).fract();
-                ui.label(&format!("NEXT LEVEL IN {:.2}", v * 10.0));
-                ui.label("");
+                ui.label(&format!(
+                    "LEVEL {}   NEXT {:.2}",
+                    player.level as u32,
+                    v * 10.0
+                ));
                 ui.label(&format!("HEALTH  {:8}", (player.health * 100.0) as u32));
                 ui.label(&format!("CREDITS {:8}", player.credits));
                 ui.label(&format!("KILLS   {:8}", player.kills));
@@ -137,17 +139,16 @@ fn ui_sidebar(
                     }
                     ui.label("");
 
-                    ui.label(&format!("TIME {:.2}", time.seconds_since_startup));
                     ui.label(&format!("GAME SPEED {:.2}", time.time_multiplier));
                     ui.horizontal(|ui| {
-                        if ui.button("PAUSE").clicked() {
-                            time.pause = !time.pause;
-                        }
                         if ui.button(" -- ").clicked() {
                             time.time_multiplier = (time.time_multiplier - 0.1).max(0.0);
                         }
                         if ui.button(" ++ ").clicked() {
                             time.time_multiplier += 0.1;
+                        }
+                        if ui.button("PAUSE").clicked() {
+                            time.pause = !time.pause;
                         }
                     });
                 }
@@ -161,6 +162,24 @@ fn ui_sidebar(
                         pref.light_r = 1.0;
                     }
                 }
+                ui.horizontal(|ui| {
+                    if ui.button(" -- ").clicked() {
+                        pref.sfx = (pref.sfx - 0.1).max(0.0);
+                    }
+                    if ui.button(" ++ ").clicked() {
+                        pref.sfx = (pref.sfx + 0.1).min(3.0);
+                    }
+                    ui.label(&format!("SFX {:.1}", pref.sfx));
+                });
+                ui.horizontal(|ui| {
+                    if ui.button(" -- ").clicked() {
+                        pref.sfx = (pref.sfx - 0.1).max(0.0);
+                    }
+                    if ui.button(" ++ ").clicked() {
+                        pref.sfx = (pref.sfx + 0.1).min(3.0);
+                    }
+                    ui.label(&format!("MUSIC {:.1}", pref.sfx));
+                });
                 ui.label("");
                 if ui.button("RESTART GAME").clicked() {
                     restart.send(RestartEvent);
@@ -225,6 +244,8 @@ fn restart_game(
 pub struct Preferences {
     pub less_lights: bool,
     pub light_r: f32, //light range mult
+    pub sfx: f64,
+    pub music: f64,
 }
 
 impl Default for Preferences {
@@ -232,6 +253,8 @@ impl Default for Preferences {
         Preferences {
             less_lights: false,
             light_r: 1.0,
+            sfx: 1.0,
+            music: 1.0,
         }
     }
 }

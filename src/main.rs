@@ -2,7 +2,7 @@
 
 use std::{f32::consts::TAU, time::Duration};
 
-use assets::{FontAssets, GameState, ModelAssets};
+use assets::{AudioAssets, FontAssets, GameState, ModelAssets};
 use bevy::{
     asset::AssetServerSettings,
     math::*,
@@ -11,6 +11,7 @@ use bevy::{
     window::{PresentMode, WindowMode, WindowResizeConstraints},
 };
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
+use bevy_kira_audio::{AudioControl, AudioInstance, AudioPlugin, AudioSettings};
 use bevy_mod_picking::*;
 use bevy_mod_raycast::RayCastMesh;
 
@@ -41,7 +42,8 @@ fn main() {
             LoadingState::new(GameState::AssetLoading)
                 .continue_to_state(GameState::RunLevel)
                 .with_collection::<FontAssets>()
-                .with_collection::<ModelAssets>(),
+                .with_collection::<ModelAssets>()
+                .with_collection::<AudioAssets>(),
         );
 
     app.insert_resource(WindowDescriptor {
@@ -66,6 +68,7 @@ fn main() {
         fit_canvas_to_parent: true,
     })
     .insert_resource(GameTime::default())
+    .insert_resource(ConLaserAudioHandle::default())
     .add_system(update_game_time)
     .insert_resource(AssetServerSettings {
         watch_for_changes: true,
@@ -76,8 +79,12 @@ fn main() {
     .add_plugins(DefaultPlugins)
     .add_plugin(GameUI)
     .add_plugin(PlayerPlugin)
-    .add_plugin(HookPlugin);
-    //.add_plugin(EditorPlugin);
+    .add_plugin(HookPlugin)
+    .insert_resource(AudioSettings {
+        sound_capacity: 32,
+        command_capacity: 32,
+    })
+    .add_plugin(AudioPlugin);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -120,6 +127,9 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     model_assets: Res<ModelAssets>,
     b: Res<GameBoard>,
+    audio_assets: Res<AudioAssets>,
+    audio: Res<bevy_kira_audio::Audio>,
+    mut con_laser_h: ResMut<ConLaserAudioHandle>,
 ) {
     // com.insert_resource(DefaultPluginState::<MyRaycastSet>::default().with_debug_cursor());
     // plane
@@ -171,7 +181,20 @@ fn setup(
 
     // Main Base
     spawn_main_base(&mut com, &model_assets, &b);
+
+    let inst = audio
+        .play(audio_assets.con_laser.clone())
+        .with_volume(0.0)
+        .looped()
+        .handle();
+    con_laser_h.0 = Some(inst);
 }
+
+#[derive(Default)]
+pub struct ConLaserAudioHandle(pub Option<Handle<AudioInstance>>);
+
+#[derive(Default)]
+pub struct MusicAudioHandle(pub Option<Handle<AudioInstance>>);
 
 fn spawn_main_base(com: &mut Commands, model_assets: &ModelAssets, b: &GameBoard) {
     let mut ecmds = com.spawn();

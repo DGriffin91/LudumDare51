@@ -31,8 +31,8 @@ impl Plugin for GameUI {
     }
 }
 
-const SELECTED_COLOR: Color32 = Color32::from_rgb(128, 128, 128);
-const DESELECTED_COLOR: Color32 = Color32::from_rgb(48, 48, 48);
+const SELECTED_COLOR: Color32 = Color32::from_rgb(94 / 3, 255 / 3, 169 / 3);
+const DESELECTED_COLOR: Color32 = Color32::from_rgb(94 / 10, 255 / 10, 169 / 10);
 
 fn select_button(ui: &mut egui::Ui, text: &str, selected: bool) -> bool {
     ui.add(egui::Button::new(text).fill(if selected {
@@ -51,11 +51,24 @@ fn ui_sidebar(
     mut time: ResMut<GameTime>,
 ) {
     let window = windows.get_primary_mut().unwrap();
+    let my_frame = egui::containers::Frame {
+        fill: Color32::from_rgba_unmultiplied(0, 0, 0, 64),
+        stroke: egui::Stroke::new(0.0, Color32::BLACK),
+        ..default()
+    };
+
     egui::SidePanel::right("right_panel")
+        .frame(my_frame)
         .resizable(false)
         .min_width(window.width() * 0.17)
         .default_width(window.width() * 0.17)
         .show(egui_context.ctx_mut(), |ui| {
+            let mut style = ui.style_mut();
+            style.visuals.override_text_color = Some(Color32::from_rgb(94, 255, 169));
+            style.visuals.widgets.active.bg_fill = DESELECTED_COLOR;
+            style.visuals.widgets.inactive.bg_fill = DESELECTED_COLOR;
+            style.visuals.widgets.open.bg_fill = DESELECTED_COLOR;
+            style.visuals.widgets.hovered.bg_fill = SELECTED_COLOR;
             ui.vertical_centered_justified(|ui| {
                 #[cfg(debug_assertions)]
                 {
@@ -150,7 +163,7 @@ pub fn setup_fonts(mut egui_context: ResMut<EguiContext>) {
     for (_text_style, mut data) in fonts.font_data.iter_mut() {
         data.tweak.scale = 1.5;
         data.font =
-            std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/FiraMono-Medium.ttf"));
+            std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/ShareTechMono-Regular.ttf"));
     }
     egui_context.ctx_mut().set_fonts(fonts);
 }

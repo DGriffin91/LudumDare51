@@ -9,8 +9,8 @@ pub enum GameState {
 
 #[derive(AssetCollection)]
 pub struct FontAssets {
-    #[asset(path = "fonts/FiraMono-Medium.ttf")]
-    pub fira_mono_medium: Handle<Font>,
+    #[asset(path = "fonts/ShareTechMono-Regular.ttf")]
+    pub mono_medium: Handle<Font>,
 }
 
 #[derive(AssetCollection)]

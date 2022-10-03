@@ -57,7 +57,7 @@ pub const GAMESETTINGS: GameSettings = GameSettings {
     flying_enemy_health: 0.08,
     flying_enemy_speed: 2.0,
     flying_enemy_spawn_speed: 3.0,
-    flying_enemy_max_spawn_speed: 0.2,
+    flying_enemy_max_spawn_speed: 0.05,
     //
     credits_for_kill: 25,
 };
@@ -184,7 +184,8 @@ pub fn mouse_interact(
                 // Player gets back 50% of cost when selling
                 player.credits += turret.cost() / 2;
             }
-        } else if !b.board[idx].filled {
+            // idx != 0 is to disallow placing tower in spawn
+        } else if !b.board[idx].filled && idx != 0 {
             b.board[idx].filled = true; //Just temp fill so we can check
             let possible_path = b.path(b.start, b.dest);
             b.board[idx].filled = false; //Undo temp fill

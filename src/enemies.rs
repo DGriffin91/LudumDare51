@@ -165,8 +165,9 @@ pub fn spawn_flying_enemy(
     }
     let since_startup = time.seconds_since_startup as f32;
     if since_startup - *last_spawn
-        > (GAMESETTINGS.flying_enemy_spawn_speed - player.spawn_rate_cut())
-            .max(GAMESETTINGS.flying_enemy_max_spawn_speed)
+        > (GAMESETTINGS.flying_enemy_spawn_speed
+            - player.spawn_rate_cut() * ((player.level - 20.0) * 0.25).clamp(1.0, 50.0))
+        .max(GAMESETTINGS.flying_enemy_max_spawn_speed)
     {
         *last_spawn = since_startup;
         let mut ecmds = com.spawn();

@@ -81,6 +81,7 @@ impl GameBoard {
     #[inline(always)]
     pub fn successors(&self, ls: IVec2) -> Vec<(IVec2, u32)> {
         let mut s = Vec::new();
+        let mut diags = [ivec2(-1, -1), ivec2(1, -1), ivec2(1, 1), ivec2(-1, 1)];
         for offset in [
             //ivec2(0, 0),
             ivec2(-1, 0),
@@ -91,13 +92,28 @@ impl GameBoard {
             let potential_pos = ls + offset;
             if potential_pos.clamp(IVec2::ZERO, ivec2(self.size[0] as i32, self.size[1] as i32))
                 != potential_pos
+                || self.board[self.ls_to_idx(potential_pos)].filled
             {
+                // Directions that are blocked also block adjacent diagonal directions
+                for diag in &mut diags {
+                    if diag.x == offset.x {
+                        *diag = ivec2(0, 0)
+                    }
+                    if diag.y == offset.y {
+                        *diag = ivec2(0, 0)
+                    }
+                }
+
                 continue;
+            } else {
+                s.push((potential_pos, 1));
             }
-            if self.board[self.ls_to_idx(potential_pos)].filled {
-                continue;
+        }
+        // Include diagonal directions that are not blocked
+        for diag in &mut diags {
+            if *diag != ivec2(0, 0) {
+                s.push((*diag, 1));
             }
-            s.push((potential_pos, 1))
         }
 
         s

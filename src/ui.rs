@@ -152,7 +152,7 @@ fn ui_sidebar(
                             time.time_multiplier = (time.time_multiplier - 0.1).max(0.0);
                         }
                         if ui.button(" ++ ").clicked() {
-                            time.time_multiplier += 0.1;
+                            time.time_multiplier = (time.time_multiplier + 0.1).min(10.0);
                         }
                         if ui.button("PAUSE").clicked() {
                             time.pause = !time.pause;
@@ -176,7 +176,7 @@ fn ui_sidebar(
                     if ui.button(" ++ ").clicked() {
                         pref.sfx = (pref.sfx + 0.1).min(3.0);
                     }
-                    ui.label(&format!("SFX {:.1}", pref.sfx * 2.0));
+                    ui.label(&format!("SFX {:.1}", pref.sfx * 4.0));
                 });
                 ui.horizontal(|ui| {
                     let mut changed = false;
@@ -193,7 +193,7 @@ fn ui_sidebar(
                         if let Some(music_h) = &music_h.0 {
                             if let Some(instance) = audio_instances.get_mut(music_h) {
                                 instance.set_volume(
-                                    pref.music * 0.2,
+                                    pref.music * 0.15,
                                     AudioTween::linear(Duration::from_secs_f32(0.1)),
                                 );
                             }
@@ -273,7 +273,7 @@ impl Default for Preferences {
         Preferences {
             less_lights: false,
             light_r: 1.0,
-            sfx: 0.5,
+            sfx: 0.25,
             music: 1.0,
         }
     }

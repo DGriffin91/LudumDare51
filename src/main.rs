@@ -193,7 +193,7 @@ fn setup(
 
     let inst = audio
         .play(audio_assets.music.clone())
-        .with_volume(0.2)
+        .with_volume(0.15)
         .fade_in(AudioTween::linear(Duration::from_secs_f32(10.0)))
         .looped()
         .handle();

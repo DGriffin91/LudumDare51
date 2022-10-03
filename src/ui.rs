@@ -19,6 +19,7 @@ pub struct GameUI;
 impl Plugin for GameUI {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_plugin(EguiPlugin)
+            .insert_resource(Preferences::default())
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::RunLevel)
@@ -44,11 +45,12 @@ fn select_button(ui: &mut egui::Ui, text: &str, selected: bool) -> bool {
 }
 
 fn ui_sidebar(
+    mut time: ResMut<GameTime>,
     mut egui_context: ResMut<EguiContext>,
     mut player: ResMut<PlayerState>,
     mut windows: ResMut<Windows>,
     mut restart: EventWriter<RestartEvent>,
-    mut time: ResMut<GameTime>,
+    mut pref: ResMut<Preferences>,
 ) {
     let window = windows.get_primary_mut().unwrap();
     let my_frame = egui::containers::Frame {
@@ -149,6 +151,16 @@ fn ui_sidebar(
                         }
                     });
                 }
+                if ui
+                    .checkbox(&mut pref.less_lights, "REDUCE LIGHTS")
+                    .changed()
+                {
+                    if pref.less_lights {
+                        pref.light_r = 0.6;
+                    } else {
+                        pref.light_r = 1.0;
+                    }
+                }
                 ui.label("");
                 if ui.button("RESTART GAME").clicked() {
                     restart.send(RestartEvent);
@@ -207,5 +219,19 @@ fn restart_game(
         *player = PlayerState::default();
         spawn_main_base(&mut com, &model_assets, &b);
         *time = GameTime::default();
+    }
+}
+
+pub struct Preferences {
+    pub less_lights: bool,
+    pub light_r: f32, //light range mult
+}
+
+impl Default for Preferences {
+    fn default() -> Self {
+        Preferences {
+            less_lights: false,
+            light_r: 1.0,
+        }
     }
 }

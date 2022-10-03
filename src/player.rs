@@ -7,6 +7,7 @@ use crate::{
     assets::{GameState, ModelAssets},
     board::GameBoard,
     turrets::Turret,
+    ui::Preferences,
     GameTime,
 };
 
@@ -155,6 +156,7 @@ pub fn mouse_interact(
     mut game_cursor: Query<&mut Transform, With<GameCursor>>,
     model_assets: Res<ModelAssets>,
     mut player: ResMut<PlayerState>,
+    pref: Res<Preferences>,
 ) {
     let mut cursor_pos = None;
     for intersection in &intersections {
@@ -194,13 +196,16 @@ pub fn mouse_interact(
                         let pos = b.ls_to_ws_vec3(b.idx_to_ls(idx));
                         b.board[idx].turret = Some(match selected_turret {
                             Turret::Laser => {
-                                Turret::spawn_laser_turret(&mut com, pos, &model_assets)
+                                Turret::spawn_laser_turret(&mut com, pos, &model_assets, &pref)
                             }
-                            Turret::LaserContinuous => {
-                                Turret::spawn_laser_continuous_turret(&mut com, pos, &model_assets)
-                            }
+                            Turret::LaserContinuous => Turret::spawn_laser_continuous_turret(
+                                &mut com,
+                                pos,
+                                &model_assets,
+                                &pref,
+                            ),
                             Turret::Shockwave => {
-                                Turret::spawn_shockwave_turret(&mut com, pos, &model_assets)
+                                Turret::spawn_shockwave_turret(&mut com, pos, &model_assets, &pref)
                             }
                         });
                         b.board[idx].filled = true;

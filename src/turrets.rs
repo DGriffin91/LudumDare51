@@ -8,6 +8,7 @@ use bevy_scene_hook::HookedSceneBundle;
 use bevy_scene_hook::SceneHook;
 
 use crate::player::PlayerState;
+use crate::ui::Preferences;
 use crate::GameTime;
 use crate::{
     assets::ModelAssets,
@@ -45,6 +46,7 @@ impl Turret {
         com: &mut Commands,
         trans: Vec3,
         model_assets: &ModelAssets,
+        pref: &Preferences,
     ) -> (Turret, bevy::prelude::Entity) {
         let mut ecmds = com.spawn();
         let entity_id = ecmds.id();
@@ -58,7 +60,7 @@ impl Turret {
             &mut ecmds,
             Color::rgb(1.0, 0.2, 1.0),
             200.0,
-            2.5,
+            1.8 * pref.light_r,
             0.5,
             vec3(0.0, 0.6, 0.0),
         );
@@ -102,6 +104,7 @@ impl Turret {
         com: &mut Commands,
         trans: Vec3,
         model_assets: &ModelAssets,
+        pref: &Preferences,
     ) -> (Turret, bevy::prelude::Entity) {
         let mut ecmds = com.spawn();
         let entity_id = ecmds.id();
@@ -114,7 +117,7 @@ impl Turret {
             &mut ecmds,
             Color::rgb(0.3, 0.0, 1.0),
             110.0,
-            2.5,
+            1.8 * (pref.light_r + 0.2),
             0.5,
             vec3(0.0, 1.0, 0.0),
         );
@@ -143,6 +146,7 @@ impl Turret {
         com: &mut Commands,
         trans: Vec3,
         model_assets: &ModelAssets,
+        pref: &Preferences,
     ) -> (Turret, bevy::prelude::Entity) {
         let mut ecmds = com.spawn();
         let entity_id = ecmds.id();
@@ -155,7 +159,7 @@ impl Turret {
             &mut ecmds,
             Color::hex("68FF72").unwrap(),
             110.0,
-            2.5,
+            2.2 * pref.light_r,
             0.5,
             vec3(0.0, 1.0, 0.0),
         );
@@ -214,6 +218,7 @@ pub fn turret_fire(
     mut laser_beams: Query<(&mut Transform, &mut Visibility, &LaserBeam), Without<DiamondLasers>>,
     mut continuous_laser_light: Query<(&Parent, &mut PointLight)>,
     player: Res<PlayerState>,
+    pref: Res<Preferences>,
 ) {
     for (mut vis, _laser) in diamond_lasers.iter_mut() {
         vis.is_visible = false;
@@ -268,14 +273,16 @@ pub fn turret_fire(
                                     hit: false,
                                     hit_despawn_countdown: 1.0,
                                 });
-                                basic_light(
-                                    &mut ecmds,
-                                    Color::rgb(0.2, 0.0, 1.0),
-                                    100.0,
-                                    1.5,
-                                    1.0,
-                                    Vec3::Y * -0.5,
-                                );
+                                if !pref.less_lights {
+                                    basic_light(
+                                        &mut ecmds,
+                                        Color::rgb(0.2, 0.0, 1.0),
+                                        100.0,
+                                        1.5,
+                                        1.0,
+                                        Vec3::Y * -0.5,
+                                    );
+                                }
                             }
                         }
                     }
@@ -335,14 +342,16 @@ pub fn turret_fire(
                                 size: 4.0,
                                 progress: 0.0,
                             });
-                            basic_light(
-                                &mut ecmds,
-                                Color::rgb(1.0, 0.0, 1.0),
-                                70.0,
-                                3.5,
-                                1.0,
-                                Vec3::Y,
-                            );
+                            if !pref.less_lights {
+                                basic_light(
+                                    &mut ecmds,
+                                    Color::rgb(1.0, 0.0, 1.0),
+                                    70.0,
+                                    3.5,
+                                    1.0,
+                                    Vec3::Y,
+                                );
+                            }
                         }
                     }
                 }
@@ -420,6 +429,7 @@ pub fn progress_projectiles(
     mut enemies: Query<(&Transform, &mut Health), With<Enemy>>,
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
+    pref: Res<Preferences>,
 ) {
     for (proj_entity, mut proj_trans, mut projectile) in projectiles.iter_mut() {
         proj_trans.translation += projectile.dir * projectile.speed;
@@ -444,14 +454,16 @@ pub fn progress_projectiles(
                             size: 4.0,
                             progress: 0.0,
                         });
-                        basic_light(
-                            &mut ecmds,
-                            Color::rgb(1.0, 0.8, 0.7),
-                            300.0,
-                            3.0,
-                            0.75,
-                            vec3(0.0, 0.6, 0.0),
-                        );
+                        if !pref.less_lights {
+                            basic_light(
+                                &mut ecmds,
+                                Color::rgb(1.0, 0.8, 0.7),
+                                300.0,
+                                3.0,
+                                0.75,
+                                vec3(0.0, 0.6, 0.0),
+                            );
+                        }
                     }
                 }
             }

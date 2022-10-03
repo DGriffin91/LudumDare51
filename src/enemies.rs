@@ -6,7 +6,7 @@ use crate::{
     board::GameBoard,
     player::{PlayerState, GAMESETTINGS},
     turrets::{basic_light, DiscExplosion},
-    ui::RestartEvent,
+    ui::{Preferences, RestartEvent},
     GameTime,
 };
 
@@ -39,6 +39,7 @@ pub fn spawn_rolling_enemy(
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
     mut restart_events: EventReader<RestartEvent>,
+    pref: Res<Preferences>,
 ) {
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
@@ -70,7 +71,7 @@ pub fn spawn_rolling_enemy(
             &mut ecmds,
             Color::rgb(1.0, 0.1, 0.1),
             30.0,
-            1.5,
+            1.5 * pref.light_r,
             0.5,
             vec3(0.0, 0.4, -0.5),
         );
@@ -94,6 +95,7 @@ pub fn spawn_rolling_enemy2(
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
     mut restart_events: EventReader<RestartEvent>,
+    pref: Res<Preferences>,
 ) {
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
@@ -125,7 +127,7 @@ pub fn spawn_rolling_enemy2(
             &mut ecmds,
             Color::rgb(1.0, 0.1, 0.3),
             30.0,
-            1.5,
+            1.5 * pref.light_r,
             0.5,
             vec3(0.0, 0.4, -0.5),
         );
@@ -149,6 +151,7 @@ pub fn spawn_flying_enemy(
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
     mut restart_events: EventReader<RestartEvent>,
+    pref: Res<Preferences>,
 ) {
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
@@ -183,7 +186,7 @@ pub fn spawn_flying_enemy(
             &mut ecmds,
             Color::rgb(1.0, 0.1, 0.1),
             200.0,
-            2.5,
+            2.5 * pref.light_r,
             0.2,
             vec3(0.0, 0.3, -0.2),
         );

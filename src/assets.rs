@@ -83,4 +83,7 @@ pub struct AudioAssets {
 
     #[asset(path = "audio/units/con_laser.flac")]
     pub con_laser: Handle<AudioSource>,
+
+    #[asset(path = "audio/music/music.ogg")]
+    pub music: Handle<AudioSource>,
 }

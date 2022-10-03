@@ -11,7 +11,7 @@ use bevy::{
     window::{PresentMode, WindowMode, WindowResizeConstraints},
 };
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
-use bevy_kira_audio::{AudioControl, AudioInstance, AudioPlugin, AudioSettings};
+use bevy_kira_audio::{AudioControl, AudioInstance, AudioPlugin, AudioSettings, AudioTween};
 use bevy_mod_picking::*;
 use bevy_mod_raycast::RayCastMesh;
 
@@ -69,6 +69,7 @@ fn main() {
     })
     .insert_resource(GameTime::default())
     .insert_resource(ConLaserAudioHandle::default())
+    .insert_resource(MusicAudioHandle::default())
     .add_system(update_game_time)
     .insert_resource(AssetServerSettings {
         watch_for_changes: true,
@@ -130,6 +131,7 @@ fn setup(
     audio_assets: Res<AudioAssets>,
     audio: Res<bevy_kira_audio::Audio>,
     mut con_laser_h: ResMut<ConLaserAudioHandle>,
+    mut music_h: ResMut<MusicAudioHandle>,
 ) {
     // com.insert_resource(DefaultPluginState::<MyRaycastSet>::default().with_debug_cursor());
     // plane
@@ -188,6 +190,14 @@ fn setup(
         .looped()
         .handle();
     con_laser_h.0 = Some(inst);
+
+    let inst = audio
+        .play(audio_assets.music.clone())
+        .with_volume(0.2)
+        .fade_in(AudioTween::linear(Duration::from_secs_f32(10.0)))
+        .looped()
+        .handle();
+    music_h.0 = Some(inst);
 }
 
 #[derive(Default)]

@@ -1,7 +1,11 @@
+use std::time::Duration;
+
 use bevy::math::*;
 use bevy::prelude::*;
 use bevy_egui::egui::Color32;
 use bevy_egui::{egui::FontDefinitions, *};
+use bevy_kira_audio::AudioInstance;
+use bevy_kira_audio::AudioTween;
 use iyes_loopless::prelude::ConditionSet;
 
 use crate::assets::GameState;
@@ -13,6 +17,7 @@ use crate::turrets::Projectile;
 use crate::GameTime;
 use crate::MainBase;
 use crate::MainBaseDestroyed;
+use crate::MusicAudioHandle;
 use crate::{player::PlayerState, turrets::Turret};
 
 pub struct GameUI;
@@ -51,6 +56,8 @@ fn ui_sidebar(
     mut windows: ResMut<Windows>,
     mut restart: EventWriter<RestartEvent>,
     mut pref: ResMut<Preferences>,
+    music_h: Res<MusicAudioHandle>,
+    mut audio_instances: ResMut<Assets<AudioInstance>>,
 ) {
     let window = windows.get_primary_mut().unwrap();
     let my_frame = egui::containers::Frame {
@@ -169,16 +176,29 @@ fn ui_sidebar(
                     if ui.button(" ++ ").clicked() {
                         pref.sfx = (pref.sfx + 0.1).min(3.0);
                     }
-                    ui.label(&format!("SFX {:.1}", pref.sfx));
+                    ui.label(&format!("SFX {:.1}", pref.sfx * 2.0));
                 });
                 ui.horizontal(|ui| {
+                    let mut changed = false;
                     if ui.button(" -- ").clicked() {
-                        pref.sfx = (pref.sfx - 0.1).max(0.0);
+                        pref.music = (pref.music - 0.1).max(0.0);
+                        changed = true;
                     }
                     if ui.button(" ++ ").clicked() {
-                        pref.sfx = (pref.sfx + 0.1).min(3.0);
+                        pref.music = (pref.music + 0.1).min(3.0);
+                        changed = true;
                     }
-                    ui.label(&format!("MUSIC {:.1}", pref.sfx));
+                    ui.label(&format!("MUSIC {:.1}", pref.music));
+                    if changed {
+                        if let Some(music_h) = &music_h.0 {
+                            if let Some(instance) = audio_instances.get_mut(music_h) {
+                                instance.set_volume(
+                                    pref.music * 0.2,
+                                    AudioTween::linear(Duration::from_secs_f32(0.1)),
+                                );
+                            }
+                        }
+                    }
                 });
                 ui.label("");
                 if ui.button("RESTART GAME").clicked() {
@@ -253,7 +273,7 @@ impl Default for Preferences {
         Preferences {
             less_lights: false,
             light_r: 1.0,
-            sfx: 1.0,
+            sfx: 0.5,
             music: 1.0,
         }
     }

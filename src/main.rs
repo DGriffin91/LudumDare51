@@ -20,9 +20,10 @@ use board::GameBoard;
 use enemies::{
     destroy_enemies, move_enemy_along_path, move_flying_enemy, spawn_flying_enemy,
     spawn_rolling_enemy, spawn_rolling_enemy2, update_board_has_enemy, update_enemy_paths,
+    update_enemy_postgame_paths, update_flying_enemy_postgame_dest,
 };
 use iyes_loopless::prelude::*;
-use player::{MyRaycastSet, PlayerPlugin, PlayerState};
+use player::{player_alive, MyRaycastSet, PlayerPlugin, PlayerState};
 use turrets::{
     basic_light, bobble_shockwave_spheres, laser_point_at_enemy, position_caps,
     progress_explosions, progress_projectiles, turret_fire, Disabled, Turret,
@@ -96,28 +97,40 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::RunLevel)
-                .label("pre")
-                .with_system(spawn_rolling_enemy)
-                .with_system(spawn_rolling_enemy2)
-                .with_system(update_enemy_paths)
                 .with_system(move_enemy_along_path)
-                .with_system(turret_fire)
-                .with_system(destroy_enemies)
                 .with_system(update_board_has_enemy)
-                .with_system(laser_point_at_enemy)
+                .with_system(move_flying_enemy)
+                .with_system(destroy_base)
                 .with_system(progress_projectiles)
                 .with_system(progress_explosions)
                 .with_system(bobble_shockwave_spheres)
                 .with_system(position_caps)
-                .with_system(move_flying_enemy)
+                .with_system(turret_fire)
+                .into(),
+        )
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::RunLevel)
+                .run_if(player_alive)
+                .with_system(update_enemy_paths)
+                .with_system(spawn_rolling_enemy)
+                .with_system(spawn_rolling_enemy2)
                 .with_system(spawn_flying_enemy)
-                .with_system(destroy_base)
+                .with_system(destroy_enemies)
+                .with_system(laser_point_at_enemy)
+                .into(),
+        )
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::RunLevel)
+                .run_if_not(player_alive)
+                .with_system(update_enemy_postgame_paths)
+                .with_system(update_flying_enemy_postgame_dest)
                 .into(),
         );
 
     app.run();
 }
-
 #[derive(Component)]
 pub struct Board;
 

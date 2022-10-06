@@ -45,7 +45,7 @@ pub fn spawn_rolling_enemy(
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
     }
-    if player.level < 20.0 || player.health < 0.0 {
+    if player.level < 20.0 {
         return;
     }
     if b.has_enemy[0] {
@@ -101,7 +101,7 @@ pub fn spawn_rolling_enemy2(
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
     }
-    if player.level < 1.0 || player.health < 0.0 {
+    if player.level < 1.0 {
         return;
     }
     if b.has_enemy[0] {
@@ -157,7 +157,7 @@ pub fn spawn_flying_enemy(
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
     }
-    if player.level < 10.0 || player.health < 0.0 {
+    if player.level < 10.0 {
         return;
     }
     if b.has_enemy[0] {
@@ -262,61 +262,65 @@ pub fn update_board_has_enemy(enemies: Query<&Transform, With<Enemy>>, mut b: Re
 #[derive(Component)]
 pub struct PathInd;
 
-pub fn update_enemy_paths(
+pub fn update_enemy_paths(b: Res<GameBoard>, mut enemies: Query<(&Transform, &mut EnemyPath)>) {
+    for (trans, mut enemy_path) in enemies.iter_mut() {
+        enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), b.dest);
+    }
+}
+
+pub fn update_enemy_postgame_paths(
     b: Res<GameBoard>,
     mut enemies: Query<(&Transform, &mut EnemyPath)>,
-    player: Res<PlayerState>,
     time: ResMut<GameTime>,
-    //mut com: Commands,
-    //path_ind: Query<Entity, With<PathInd>>,
-    //mut meshes: ResMut<Assets<Mesh>>,
-    //mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    if player.health < 0.0 {
-        let mut rng = rand::thread_rng();
-        for (trans, mut enemy_path) in enemies.iter_mut() {
-            enemy_path.new_rand_loc_timer -= time.delta_seconds;
-            if enemy_path.new_rand_loc_timer < 0.0 {
-                enemy_path.new_rand_loc_timer += rng.gen_range(4.0..6.0);
-                let rnd = vec3(
-                    rng.gen_range(-12.0..12.0) as f32,
-                    0.0,
-                    rng.gen_range(-12.0..12.0) as f32,
-                );
-                enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), b.ws_vec3_to_ls(rnd));
-            } else if let Some(path) = &enemy_path.path {
-                if let Some(last) = path.0.last() {
-                    enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), *last);
-                }
+    let mut rng = rand::thread_rng();
+    for (trans, mut enemy_path) in enemies.iter_mut() {
+        enemy_path.new_rand_loc_timer -= time.delta_seconds;
+        if enemy_path.new_rand_loc_timer < 0.0 {
+            enemy_path.new_rand_loc_timer += rng.gen_range(4.0..6.0);
+            let rnd = vec3(
+                rng.gen_range(-12.0..12.0) as f32,
+                0.0,
+                rng.gen_range(-12.0..12.0) as f32,
+            );
+            enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), b.ws_vec3_to_ls(rnd));
+        } else if let Some(path) = &enemy_path.path {
+            if let Some(last) = path.0.last() {
+                enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), *last);
             }
         }
-    } else {
-        for (trans, mut enemy_path) in enemies.iter_mut() {
-            enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), b.dest);
+    }
+}
+
+pub fn debug_show_enemy_path(
+    b: Res<GameBoard>,
+    enemies: Query<(&Transform, &EnemyPath)>,
+    mut com: Commands,
+    path_ind: Query<Entity, With<PathInd>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for entity in &path_ind {
+        com.entity(entity).despawn_recursive();
+    }
+    if let Some((_, enemy_path)) = enemies.iter().next() {
+        for path in &enemy_path.path {
+            for p in &path.0 {
+                com.spawn_bundle(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::UVSphere {
+                        radius: 0.5,
+                        ..default()
+                    })),
+                    material: materials.add(Color::rgb(0.0, 0.5, 0.0).into()),
+                    transform: Transform::from_translation(
+                        b.ls_to_ws_vec3(*p) + vec3(0.0, 0.5, 0.0),
+                    ),
+                    ..default()
+                })
+                .insert(PathInd);
+            }
         }
     }
-    // DEBUG PATH SPHERES
-    //for entity in &path_ind {
-    //    com.entity(entity).despawn_recursive();
-    //}
-    //if let Some((_, enemy_path)) = enemies.iter().next() {
-    //    for path in &enemy_path.path {
-    //        for p in &path.0 {
-    //            com.spawn_bundle(PbrBundle {
-    //                mesh: meshes.add(Mesh::from(shape::UVSphere {
-    //                    radius: 0.5,
-    //                    ..default()
-    //                })),
-    //                material: materials.add(Color::rgb(0.0, 0.5, 0.0).into()),
-    //                transform: Transform::from_translation(
-    //                    b.ls_to_ws_vec3(*p) + vec3(0.0, 0.5, 0.0),
-    //                ),
-    //                ..default()
-    //            })
-    //            .insert(PathInd);
-    //        }
-    //    }
-    //}
 }
 
 pub fn move_enemy_along_path(
@@ -373,21 +377,6 @@ pub fn move_flying_enemy(
     model_assets: Res<ModelAssets>,
     b: Res<GameBoard>,
 ) {
-    if player.health < 0.0 {
-        let mut rng = rand::thread_rng();
-        for (_enemy_entity, mut _enemy_trans, mut fly_enemy, _enemy) in enemies.iter_mut() {
-            fly_enemy.new_rand_loc_timer -= time.delta_seconds;
-            if fly_enemy.new_rand_loc_timer < 0.0 {
-                fly_enemy.new_rand_loc_timer += rng.gen_range(1.0..5.0);
-                let rnd = vec3(
-                    rng.gen_range(-35.0..35.0) as f32,
-                    2.0,
-                    rng.gen_range(-35.0..35.0) as f32,
-                );
-                fly_enemy.dest = rnd;
-            }
-        }
-    }
     for (enemy_entity, mut enemy_trans, fly_enemy, enemy) in enemies.iter_mut() {
         enemy_trans.look_at(fly_enemy.dest, Vec3::Y);
         let dir = (fly_enemy.dest - enemy_trans.translation).normalize();
@@ -413,6 +402,25 @@ pub fn move_flying_enemy(
                 0.75,
                 vec3(0.0, 1.6, 0.0),
             );
+        }
+    }
+}
+
+pub fn update_flying_enemy_postgame_dest(
+    time: ResMut<GameTime>,
+    mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
+) {
+    let mut rng = rand::thread_rng();
+    for (_enemy_entity, mut _enemy_trans, mut fly_enemy, _enemy) in enemies.iter_mut() {
+        fly_enemy.new_rand_loc_timer -= time.delta_seconds;
+        if fly_enemy.new_rand_loc_timer < 0.0 {
+            fly_enemy.new_rand_loc_timer += rng.gen_range(1.0..5.0);
+            let rnd = vec3(
+                rng.gen_range(-35.0..35.0) as f32,
+                2.0,
+                rng.gen_range(-35.0..35.0) as f32,
+            );
+            fly_enemy.dest = rnd;
         }
     }
 }

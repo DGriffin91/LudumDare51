@@ -106,8 +106,13 @@ impl Plugin for PlayerPlugin {
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::RunLevel)
-                    .after("pre")
                     .with_system(mouse_interact)
+                    .into(),
+            )
+            .add_system_set(
+                ConditionSet::new()
+                    .run_in_state(GameState::RunLevel)
+                    .run_if(player_alive)
                     .with_system(set_level)
                     .into(),
             )
@@ -121,11 +126,13 @@ impl Plugin for PlayerPlugin {
     }
 }
 
+pub fn player_alive(player: Res<PlayerState>) -> bool {
+    player.health > 0.0
+}
+
 fn set_level(time: ResMut<GameTime>, mut player: ResMut<PlayerState>) {
-    if player.health > 0.0 {
-        player.level_time += time.delta_seconds;
-        player.level = (player.level_time / 10.0).floor();
-    }
+    player.level_time += time.delta_seconds;
+    player.level = (player.level_time / 10.0).floor();
 }
 
 fn setup(
@@ -215,14 +222,6 @@ pub fn mouse_interact(
             }
         }
     }
-
-    //for event in events.iter() {
-    //    match event {
-    //        PickingEvent::Selection(e) => info!("A selection event happened: {:?}", e),
-    //        PickingEvent::Hover(e) => info!("Egads! A hover event!? {:?}", e),
-    //        PickingEvent::Clicked(e) => {}
-    //    }
-    //}
 }
 
 #[derive(Component)]

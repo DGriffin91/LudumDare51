@@ -257,7 +257,9 @@ fn restart_game(
         *b = GameBoard::default();
         *player = PlayerState::default();
         spawn_main_base(&mut com, &model_assets, &b);
+        let old_time_multiplier = time.time_multiplier;
         *time = GameTime::default();
+        time.time_multiplier = old_time_multiplier;
     }
 }
 

@@ -12,8 +12,8 @@ use bevy::{
 };
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
 use bevy_kira_audio::{AudioControl, AudioInstance, AudioPlugin, AudioSettings, AudioTween};
-use bevy_mod_picking::*;
-use bevy_mod_raycast::RayCastMesh;
+
+use bevy_mod_raycast::{RayCastMesh, RayCastSource};
 
 use bevy_scene_hook::{HookPlugin, HookedSceneBundle, SceneHook};
 use board::GameBoard;
@@ -157,7 +157,6 @@ fn setup(
         }),
         ..default()
     })
-    .insert_bundle(PickableBundle::default())
     .insert(Board)
     .insert(RayCastMesh::<MyRaycastSet>::default());
 
@@ -191,7 +190,6 @@ fn setup(
         }),
         ..default()
     })
-    .insert_bundle(PickingCameraBundle::default())
     .insert(RayCastSource::<MyRaycastSet>::new());
 
     // Main Base

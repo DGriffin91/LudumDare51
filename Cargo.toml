@@ -14,7 +14,6 @@ bevy_kira_audio = { version = "0.12", features = ["flac"] }
 bevy_egui = "0.16"
 bevy-web-resizer = "3.0"
 pathfinding = "3.0"
-bevy_mod_picking = "0.9"
 bevy_mod_raycast = "0.6"
 iyes_loopless = "0.7"
 bevy-scene-hook = "4.0"

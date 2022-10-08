@@ -2,7 +2,6 @@
 
 use std::{f32::consts::TAU, time::Duration};
 
-use action::ActionPlugin;
 use assets::{AudioAssets, FontAssets, ModelAssets};
 use audio::GameAudioPlugin;
 use bevy::{
@@ -20,11 +19,11 @@ use bevy_mod_raycast::{RayCastMesh, RayCastSource};
 use bevy_scene_hook::{HookPlugin, HookedSceneBundle, SceneHook};
 use board::GameBoard;
 
-use enemies::EnemyPlugin;
+use enemies::{EnemiesPlugin, Enemy, LastSpawns};
 use iyes_loopless::prelude::*;
-use player::{MyRaycastSet, PlayerPlugin, PlayerState};
+use player::{MyRaycastSet, PlayerState};
 
-use turrets::{Disabled, Turret, TurretPlugin};
+use turrets::{Disabled, Projectile, Turret};
 use ui::GameUI;
 pub mod action;
 pub mod assets;
@@ -32,6 +31,7 @@ pub mod audio;
 pub mod board;
 pub mod enemies;
 pub mod player;
+pub mod schedule;
 pub mod turrets;
 pub mod ui;
 
@@ -75,21 +75,21 @@ fn main() {
     })
     .insert_resource(ClearColor(Color::BLACK))
     .insert_resource(GameBoard::default())
+    .insert_resource(RestartGame::default())
     .add_plugins(DefaultPlugins)
-    .add_plugin(GameUI)
-    .add_plugin(PlayerPlugin)
-    .add_plugin(HookPlugin)
-    .add_plugin(GameAudioPlugin)
-    .add_plugin(EnemyPlugin)
-    .add_plugin(TurretPlugin)
-    .add_plugin(ActionPlugin);
+    .add_plugin(HookPlugin);
+
+    app.add_plugin(GameUI)
+        .add_plugin(EnemiesPlugin)
+        .add_plugin(GameAudioPlugin);
+    schedule::setup_schedule(&mut app);
 
     #[cfg(target_arch = "wasm32")]
     {
         app.add_plugin(bevy_web_resizer::Plugin);
     }
 
-    app.add_enter_system(GameState::RunLevel, setup)
+    app.add_enter_system(GameState::RunLevel, setup_level)
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::RunLevel)
@@ -103,7 +103,7 @@ fn main() {
 pub struct Board;
 
 /// set up a simple 3D scene
-fn setup(
+fn setup_level(
     mut com: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -251,6 +251,51 @@ fn update_game_time(time: ResMut<Time>, mut gametime: ResMut<GameTime>) {
         gametime.delta_seconds = time.delta_seconds() * gametime.time_multiplier as f32;
         gametime.seconds_since_startup += time.delta_seconds_f64() * gametime.time_multiplier;
         gametime.time_since_startup += delta;
+    }
+}
+
+#[derive(Deref, DerefMut, Default)]
+pub struct RestartGame(bool);
+
+fn restart_game(
+    mut com: Commands,
+    mut restart_game: ResMut<RestartGame>,
+    mut player: ResMut<PlayerState>,
+    mut b: ResMut<GameBoard>,
+    model_assets: Res<ModelAssets>,
+    old_base: Query<Entity, With<MainBaseDestroyed>>,
+    new_base: Query<Entity, With<MainBase>>,
+    enemies: Query<Entity, With<Enemy>>,
+    towers: Query<Entity, With<Turret>>,
+    projectiles: Query<Entity, With<Projectile>>,
+    mut time: ResMut<GameTime>,
+    mut last_spawns: ResMut<LastSpawns>,
+) {
+    if **restart_game {
+        **restart_game = false;
+        for e in old_base.iter() {
+            com.entity(e).despawn_recursive();
+        }
+        for e in new_base.iter() {
+            com.entity(e).despawn_recursive();
+        }
+        for e in enemies.iter() {
+            com.entity(e).despawn_recursive();
+        }
+        for e in towers.iter() {
+            com.entity(e).despawn_recursive();
+        }
+        for e in projectiles.iter() {
+            com.entity(e).despawn_recursive();
+        }
+        *b = GameBoard::default();
+        *player = PlayerState::default();
+        spawn_main_base(&mut com, &model_assets, &b);
+        let old_time_multiplier = time.time_multiplier;
+        *time = GameTime::default();
+        time.time_multiplier = old_time_multiplier;
+
+        *last_spawns = LastSpawns::default();
     }
 }
 

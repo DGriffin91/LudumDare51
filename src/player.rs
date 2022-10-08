@@ -1,16 +1,11 @@
 use bevy::{math::*, prelude::*};
-use bevy_mod_raycast::{
-    DefaultRaycastingPlugin, Intersection, RayCastMethod, RayCastSource, RaycastSystem,
-};
-use bevy_system_graph::SystemGraph;
-use iyes_loopless::prelude::*;
+use bevy_mod_raycast::{Intersection, RayCastMethod, RayCastSource};
 
 use crate::{
     action::{Action, ActionQueue},
     board::GameBoard,
-    game_state_run_level,
     turrets::Turret,
-    GameState, GameTime,
+    GameTime,
 };
 
 pub struct GameSettings {
@@ -115,35 +110,7 @@ impl Default for PlayerState {
     }
 }
 
-pub struct PlayerPlugin;
-impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugin(DefaultRaycastingPlugin::<MyRaycastSet>::default())
-            .insert_resource(PlayerState::default())
-            .add_enter_system(GameState::RunLevel, setup)
-            .add_system_to_stage(
-                CoreStage::First,
-                update_raycast_with_cursor.before(RaycastSystem::BuildRays::<MyRaycastSet>),
-            );
-
-        app.add_system_set(
-            Into::<SystemSet>::into(
-                SystemGraph::new()
-                    .root(set_level)
-                    .then(mouse_interact)
-                    .graph(),
-            )
-            .with_run_criteria(game_state_run_level)
-            .label("STEP PLAYER")
-            .before("STEP ENEMIES"),
-        );
-        //.add_plugins(DefaultPickingPlugins)
-        //.add_plugin(DebugCursorPickingPlugin)
-        //.add_plugin(DebugEventsPickingPlugin)
-    }
-}
-
-fn set_level(time: ResMut<GameTime>, mut player: ResMut<PlayerState>) {
+pub fn set_level(time: ResMut<GameTime>, mut player: ResMut<PlayerState>) {
     if !player.alive() {
         return;
     }
@@ -151,7 +118,7 @@ fn set_level(time: ResMut<GameTime>, mut player: ResMut<PlayerState>) {
     player.level = (player.level_time / 10.0).floor();
 }
 
-fn setup(
+pub fn setup_player(
     mut com: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -221,7 +188,7 @@ pub fn mouse_interact(
 #[derive(Component)]
 pub struct GameCursor;
 
-fn update_raycast_with_cursor(
+pub fn update_raycast_with_cursor(
     mut cursor: EventReader<CursorMoved>,
     mut query: Query<&mut RayCastSource<MyRaycastSet>>,
 ) {

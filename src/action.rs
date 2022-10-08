@@ -1,36 +1,16 @@
 use bevy::{math::*, prelude::*};
-use iyes_loopless::prelude::*;
 
 use crate::{
-    assets::ModelAssets,
-    board::GameBoard,
-    player::PlayerState,
-    turrets::Turret,
-    ui::{Preferences, RestartEvent},
-    GameState, GameTime,
+    assets::ModelAssets, board::GameBoard, player::PlayerState, turrets::Turret, ui::Preferences,
+    GameTime, RestartGame,
 };
 
-pub struct ActionPlugin;
-impl Plugin for ActionPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(ActionQueue::default());
-        app.add_system_set(
-            ConditionSet::new()
-                .run_in_state(GameState::RunLevel)
-                .label("STEP ACTION")
-                .after("STEP TURRET")
-                .with_system(process_actions)
-                .into(),
-        );
-    }
-}
-
-fn process_actions(
+pub fn process_actions(
     mut com: Commands,
     mut action_queue: ResMut<ActionQueue>,
     mut player: ResMut<PlayerState>,
     mut time: ResMut<GameTime>,
-    mut restart: EventWriter<RestartEvent>,
+    mut restart: ResMut<RestartGame>,
     model_assets: Res<ModelAssets>,
     mut b: ResMut<GameBoard>,
     pref: Res<Preferences>,
@@ -100,7 +80,7 @@ fn process_actions(
                 time.pause = !time.pause;
             }
             Action::RestartGame => {
-                restart.send(RestartEvent);
+                **restart = true;
             }
             Action::CheatCredits => {
                 if debug_build {

@@ -1,47 +1,26 @@
 use bevy::{math::*, prelude::*};
 
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
-use bevy_system_graph::SystemGraph;
 
 use crate::{
     assets::ModelAssets,
     audio::{AudioEvents, EXPLOSION_SOUND},
     basic_light,
     board::GameBoard,
-    game_state_run_level,
     player::{PlayerState, GAMESETTINGS},
     turrets::DiscExplosion,
-    ui::{Preferences, RestartEvent},
+    ui::Preferences,
     GameTime,
 };
 
-use rand::Rng;
-
-pub struct EnemyPlugin;
-impl Plugin for EnemyPlugin {
+pub struct EnemiesPlugin;
+impl Plugin for EnemiesPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system_set(
-            Into::<SystemSet>::into(
-                SystemGraph::new()
-                    .root(destroy_enemies)
-                    .then(spawn_rolling_enemy)
-                    .then(spawn_rolling_enemy2)
-                    .then(spawn_flying_enemy)
-                    .then(update_enemy_paths)
-                    .then(update_board_has_enemy)
-                    .then(move_enemy_along_path)
-                    .then(move_flying_enemy)
-                    .then(check_enemy_at_dest)
-                    .then(check_flying_enemy_at_dest)
-                    .then(update_enemy_postgame_paths)
-                    .then(update_flying_enemy_postgame_dest)
-                    .graph(),
-            )
-            .with_run_criteria(game_state_run_level)
-            .label("STEP ENEMIES"),
-        );
+        app.insert_resource(LastSpawns::default());
     }
 }
+
+use rand::Rng;
 
 #[derive(Component, Default)]
 pub struct EnemyPath {
@@ -63,22 +42,26 @@ pub struct FlyingEnemy {
     new_rand_loc_timer: f32,
 }
 
-pub fn spawn_rolling_enemy(
+#[derive(Default)]
+pub struct LastSpawns {
+    rolling_enemy: f32,
+    rolling_enemy2: f32,
+    flying_enemy: f32,
+}
+
+pub(crate) fn spawn_rolling_enemy(
     time: ResMut<GameTime>,
     mut com: Commands,
-    mut last_spawn: Local<f32>,
+    mut last_spawns: ResMut<LastSpawns>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
-    mut restart_events: EventReader<RestartEvent>,
     pref: Res<Preferences>,
 ) {
     if !player.alive() {
         return;
     }
-    for _ in restart_events.iter() {
-        *last_spawn = 0.0;
-    }
+
     if player.level < 20.0 {
         return;
     }
@@ -86,11 +69,11 @@ pub fn spawn_rolling_enemy(
         return;
     }
     let since_startup = time.seconds_since_startup as f32;
-    if since_startup - *last_spawn
+    if since_startup - last_spawns.rolling_enemy
         > (GAMESETTINGS.rolling_enemy_spawn_speed - player.spawn_rate_cut())
             .max(GAMESETTINGS.rolling_enemy_max_spawn_speed)
     {
-        *last_spawn = since_startup;
+        last_spawns.rolling_enemy = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
@@ -122,21 +105,17 @@ pub fn spawn_rolling_enemy(
     }
 }
 
-pub fn spawn_rolling_enemy2(
+pub(crate) fn spawn_rolling_enemy2(
     time: ResMut<GameTime>,
     mut com: Commands,
-    mut last_spawn: Local<f32>,
+    mut last_spawns: ResMut<LastSpawns>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
-    mut restart_events: EventReader<RestartEvent>,
     pref: Res<Preferences>,
 ) {
     if !player.alive() {
         return;
-    }
-    for _ in restart_events.iter() {
-        *last_spawn = 0.0;
     }
     if player.level < 1.0 {
         return;
@@ -145,11 +124,11 @@ pub fn spawn_rolling_enemy2(
         return;
     }
     let since_startup = time.seconds_since_startup as f32;
-    if since_startup - *last_spawn
+    if since_startup - last_spawns.rolling_enemy2
         > (GAMESETTINGS.rolling_enemy_2_spawn_speed - player.spawn_rate_cut())
             .max(GAMESETTINGS.rolling_enemy_2_max_spawn_speed)
     {
-        *last_spawn = since_startup;
+        last_spawns.rolling_enemy2 = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
@@ -181,21 +160,17 @@ pub fn spawn_rolling_enemy2(
     }
 }
 
-pub fn spawn_flying_enemy(
+pub(crate) fn spawn_flying_enemy(
     time: ResMut<GameTime>,
     mut com: Commands,
-    mut last_spawn: Local<f32>,
+    mut last_spawns: ResMut<LastSpawns>,
     b: Res<GameBoard>,
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
-    mut restart_events: EventReader<RestartEvent>,
     pref: Res<Preferences>,
 ) {
     if !player.alive() {
         return;
-    }
-    for _ in restart_events.iter() {
-        *last_spawn = 0.0;
     }
     if player.level < 10.0 {
         return;
@@ -204,12 +179,12 @@ pub fn spawn_flying_enemy(
         return;
     }
     let since_startup = time.seconds_since_startup as f32;
-    if since_startup - *last_spawn
+    if since_startup - last_spawns.flying_enemy
         > (GAMESETTINGS.flying_enemy_spawn_speed
             - player.spawn_rate_cut() * ((player.level - 20.0) * 0.25).clamp(1.0, 50.0))
         .max(GAMESETTINGS.flying_enemy_max_spawn_speed)
     {
-        *last_spawn = since_startup;
+        last_spawns.flying_enemy = since_startup;
         let mut ecmds = com.spawn();
 
         ecmds
@@ -255,7 +230,7 @@ pub fn spawn_flying_enemy(
     }
 }
 
-pub fn destroy_enemies(
+pub(crate) fn destroy_enemies(
     mut com: Commands,
     enemies: Query<(Entity, &Health), With<Enemy>>,
     mut player: ResMut<PlayerState>,
@@ -274,7 +249,10 @@ pub fn destroy_enemies(
     }
 }
 
-pub fn update_board_has_enemy(enemies: Query<&Transform, With<Enemy>>, mut b: ResMut<GameBoard>) {
+pub(crate) fn update_board_has_enemy(
+    enemies: Query<&Transform, With<Enemy>>,
+    mut b: ResMut<GameBoard>,
+) {
     b.reset_has_enemy();
     for trans in enemies.iter() {
         let idx = b.ls_to_idx(b.ws_vec3_to_ls(trans.translation));
@@ -285,7 +263,7 @@ pub fn update_board_has_enemy(enemies: Query<&Transform, With<Enemy>>, mut b: Re
 #[derive(Component)]
 pub struct PathInd;
 
-pub fn update_enemy_paths(
+pub(crate) fn update_enemy_paths(
     b: Res<GameBoard>,
     mut enemies: Query<(&Transform, &mut EnemyPath)>,
     player: Res<PlayerState>,
@@ -298,7 +276,7 @@ pub fn update_enemy_paths(
     }
 }
 
-pub fn update_enemy_postgame_paths(
+pub(crate) fn update_enemy_postgame_paths(
     b: Res<GameBoard>,
     mut enemies: Query<(&Transform, &mut EnemyPath)>,
     time: ResMut<GameTime>,
@@ -326,7 +304,8 @@ pub fn update_enemy_postgame_paths(
     }
 }
 
-pub fn debug_show_enemy_path(
+#[allow(dead_code)]
+pub(crate) fn debug_show_enemy_path(
     b: Res<GameBoard>,
     enemies: Query<(&Transform, &EnemyPath)>,
     mut com: Commands,
@@ -357,7 +336,7 @@ pub fn debug_show_enemy_path(
     }
 }
 
-pub fn move_enemy_along_path(
+pub(crate) fn move_enemy_along_path(
     time: ResMut<GameTime>,
     b: Res<GameBoard>,
     mut enemies: Query<(&mut Transform, &mut EnemyPath, &Enemy)>,
@@ -378,7 +357,7 @@ pub fn move_enemy_along_path(
     }
 }
 
-pub fn check_enemy_at_dest(
+pub(crate) fn check_enemy_at_dest(
     mut com: Commands,
     b: Res<GameBoard>,
     enemies: Query<(Entity, &Transform), With<Enemy>>,
@@ -413,7 +392,7 @@ pub fn check_enemy_at_dest(
     }
 }
 
-pub fn move_flying_enemy(
+pub(crate) fn move_flying_enemy(
     time: ResMut<GameTime>,
     mut enemies: Query<(&mut Transform, &mut FlyingEnemy, &Enemy)>,
 ) {
@@ -424,7 +403,7 @@ pub fn move_flying_enemy(
     }
 }
 
-pub fn check_flying_enemy_at_dest(
+pub(crate) fn check_flying_enemy_at_dest(
     mut com: Commands,
     b: Res<GameBoard>,
     enemies: Query<(Entity, &Transform), With<FlyingEnemy>>,
@@ -459,7 +438,7 @@ pub fn check_flying_enemy_at_dest(
     }
 }
 
-pub fn update_flying_enemy_postgame_dest(
+pub(crate) fn update_flying_enemy_postgame_dest(
     time: ResMut<GameTime>,
     mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
     player: Res<PlayerState>,

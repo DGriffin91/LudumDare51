@@ -6,18 +6,13 @@ use iyes_loopless::prelude::ConditionSet;
 
 use crate::action::Action;
 use crate::action::ActionQueue;
-use crate::assets::ModelAssets;
 use crate::audio::AudioEvents;
 use crate::audio::MUSIC_LEVEL_CHANGED;
 use crate::audio::SFX_LEVEL_CHANGED;
-use crate::board::GameBoard;
-use crate::enemies::Enemy;
-use crate::spawn_main_base;
-use crate::turrets::Projectile;
+
 use crate::GameState;
 use crate::GameTime;
-use crate::MainBase;
-use crate::MainBaseDestroyed;
+
 use crate::{player::PlayerState, turrets::Turret};
 
 pub struct GameUI;
@@ -27,15 +22,11 @@ impl Plugin for GameUI {
             .insert_resource(Preferences::default())
             .add_system_set(
                 ConditionSet::new()
-                    .label("STEP UI")
-                    .before("STEP ENEMIES")
                     .run_in_state(GameState::RunLevel)
                     .with_system(ui_sidebar)
-                    .with_system(restart_game)
                     .into(),
             )
-            .add_startup_system(setup_fonts)
-            .add_event::<RestartEvent>();
+            .add_startup_system(setup_fonts);
     }
 }
 
@@ -203,50 +194,6 @@ pub fn setup_fonts(mut egui_context: ResMut<EguiContext>) {
             std::borrow::Cow::Borrowed(include_bytes!("../assets/fonts/ShareTechMono-Regular.ttf"));
     }
     egui_context.ctx_mut().set_fonts(fonts);
-}
-
-pub struct RestartEvent;
-
-fn restart_game(
-    mut com: Commands,
-    mut restart_events: EventReader<RestartEvent>,
-    mut player: ResMut<PlayerState>,
-    mut b: ResMut<GameBoard>,
-    model_assets: Res<ModelAssets>,
-    old_base: Query<Entity, With<MainBaseDestroyed>>,
-    new_base: Query<Entity, With<MainBase>>,
-    enemies: Query<Entity, With<Enemy>>,
-    towers: Query<Entity, With<Turret>>,
-    projectiles: Query<Entity, With<Projectile>>,
-    mut time: ResMut<GameTime>,
-) {
-    let mut restart = false;
-    for _ in restart_events.iter() {
-        restart = true;
-    }
-    if restart {
-        for e in old_base.iter() {
-            com.entity(e).despawn_recursive();
-        }
-        for e in new_base.iter() {
-            com.entity(e).despawn_recursive();
-        }
-        for e in enemies.iter() {
-            com.entity(e).despawn_recursive();
-        }
-        for e in towers.iter() {
-            com.entity(e).despawn_recursive();
-        }
-        for e in projectiles.iter() {
-            com.entity(e).despawn_recursive();
-        }
-        *b = GameBoard::default();
-        *player = PlayerState::default();
-        spawn_main_base(&mut com, &model_assets, &b);
-        let old_time_multiplier = time.time_multiplier;
-        *time = GameTime::default();
-        time.time_multiplier = old_time_multiplier;
-    }
 }
 
 pub struct Preferences {

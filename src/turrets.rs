@@ -5,14 +5,12 @@ use bevy::math::*;
 use bevy::prelude::*;
 use bevy_scene_hook::HookedSceneBundle;
 use bevy_scene_hook::SceneHook;
-use bevy_system_graph::SystemGraph;
 
 use crate::audio::AudioEvents;
 use crate::audio::CONTINUOUS_LASER_SOUND;
 use crate::audio::LASER_SOUND;
 use crate::audio::WAVE_SOUND;
 use crate::basic_light;
-use crate::game_state_run_level;
 use crate::player::PlayerState;
 use crate::ui::Preferences;
 
@@ -21,28 +19,6 @@ use crate::{
     assets::ModelAssets,
     enemies::{Enemy, Health},
 };
-
-pub struct TurretPlugin;
-impl Plugin for TurretPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system_set(
-            Into::<SystemSet>::into(
-                SystemGraph::new()
-                    .root(progress_projectiles)
-                    .then(progress_explosions)
-                    .then(bobble_shockwave_spheres)
-                    .then(position_caps)
-                    .then(reset_turret_gfx)
-                    .then(turret_fire)
-                    .then(blaster_point_at_enemy)
-                    .graph(),
-            )
-            .with_run_criteria(game_state_run_level)
-            .label("STEP TURRET")
-            .after("STEP ENEMIES"),
-        );
-    }
-}
 
 #[derive(Clone, Copy, Component, PartialEq, Eq)]
 pub enum Turret {

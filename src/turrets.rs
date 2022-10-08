@@ -1,16 +1,18 @@
 use std::f32::INFINITY;
 use std::time::Duration;
 
-use bevy::ecs::system::EntityCommands;
 use bevy::math::*;
 use bevy::prelude::*;
 use bevy_scene_hook::HookedSceneBundle;
 use bevy_scene_hook::SceneHook;
+use iyes_loopless::prelude::*;
 
+use crate::assets::GameState;
 use crate::audio::AudioEvents;
 use crate::audio::CONTINUOUS_LASER_SOUND;
 use crate::audio::LASER_SOUND;
 use crate::audio::WAVE_SOUND;
+use crate::basic_light;
 use crate::player::PlayerState;
 use crate::ui::Preferences;
 use crate::GameTime;
@@ -18,6 +20,28 @@ use crate::{
     assets::ModelAssets,
     enemies::{Enemy, Health},
 };
+
+pub struct TurretPlugin;
+impl Plugin for TurretPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::RunLevel)
+                .with_system(progress_projectiles)
+                .with_system(progress_explosions)
+                .with_system(bobble_shockwave_spheres)
+                .with_system(position_caps)
+                .with_system(turret_fire)
+                .into(),
+        )
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::RunLevel)
+                .with_system(laser_point_at_enemy)
+                .into(),
+        );
+    }
+}
 
 #[derive(Clone, Copy, Component, PartialEq, Eq)]
 pub enum Turret {
@@ -367,29 +391,6 @@ pub fn turret_fire(
             }
         }
     }
-}
-
-pub fn basic_light(
-    cmds: &mut EntityCommands,
-    color: Color,
-    intensity: f32,
-    range: f32,
-    radius: f32,
-    trans: Vec3,
-) {
-    cmds.add_children(|parent| {
-        parent.spawn_bundle(PointLightBundle {
-            point_light: PointLight {
-                color,
-                intensity,
-                range,
-                radius,
-                ..default()
-            },
-            transform: Transform::from_translation(trans),
-            ..default()
-        });
-    });
 }
 
 pub fn laser_point_at_enemy(

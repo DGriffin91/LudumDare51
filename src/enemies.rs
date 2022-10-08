@@ -1,18 +1,56 @@
 use bevy::{math::*, prelude::*};
 
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
+use iyes_loopless::prelude::*;
 
 use crate::{
-    assets::ModelAssets,
+    assets::{GameState, ModelAssets},
     audio::{AudioEvents, EXPLOSION_SOUND},
+    basic_light,
     board::GameBoard,
-    player::{PlayerState, GAMESETTINGS},
-    turrets::{basic_light, DiscExplosion},
+    player::{player_alive, PlayerState, GAMESETTINGS},
+    turrets::DiscExplosion,
     ui::{Preferences, RestartEvent},
     GameTime,
 };
 
 use rand::Rng;
+
+pub struct EnemyPlugin;
+impl Plugin for EnemyPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::RunLevel)
+                .with_system(move_enemy_along_path)
+                .with_system(check_enemy_at_dest)
+                .with_system(move_flying_enemy)
+                .with_system(check_flying_enemy_at_dest)
+                .with_system(update_board_has_enemy)
+                .into(),
+        )
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::RunLevel)
+                .run_if(player_alive)
+                .with_system(update_enemy_paths)
+                .with_system(spawn_rolling_enemy)
+                .with_system(spawn_rolling_enemy2)
+                .with_system(spawn_flying_enemy)
+                .with_system(destroy_enemies)
+                .into(),
+        )
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::RunLevel)
+                .run_if_not(player_alive)
+                .with_system(update_enemy_postgame_paths)
+                .with_system(update_flying_enemy_postgame_dest)
+                .into(),
+        );
+    }
+}
+
 #[derive(Component, Default)]
 pub struct EnemyPath {
     pub path: Option<(Vec<IVec2>, u32)>,
@@ -305,14 +343,11 @@ pub fn debug_show_enemy_path(
 }
 
 pub fn move_enemy_along_path(
-    mut com: Commands,
     time: ResMut<GameTime>,
     b: Res<GameBoard>,
-    mut enemies: Query<(Entity, &mut Transform, &mut EnemyPath, &Enemy)>,
-    mut player: ResMut<PlayerState>,
-    model_assets: Res<ModelAssets>,
+    mut enemies: Query<(&mut Transform, &mut EnemyPath, &Enemy)>,
 ) {
-    for (enemy_entity, mut enemy_trans, enemy_path, enemy) in enemies.iter_mut() {
+    for (mut enemy_trans, enemy_path, enemy) in enemies.iter_mut() {
         if let Some(path) = &enemy_path.path {
             if path.0.len() > 1 {
                 let p = enemy_trans.translation;
@@ -324,44 +359,65 @@ pub fn move_enemy_along_path(
                 }
                 enemy_trans.look_at(next_pos, Vec3::Y);
             }
-            if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 1.0 {
-                player.health -= 0.1;
-                com.entity(enemy_entity).despawn_recursive();
-                let mut ecmds = com.spawn_bundle(SceneBundle {
-                    scene: model_assets.disc.clone(),
-                    transform: Transform::from_translation(enemy_trans.translation + Vec3::Y * 0.5),
-                    ..Default::default()
-                });
-                ecmds.insert(DiscExplosion {
-                    speed: 9.0,
-                    size: 4.0,
-                    progress: 0.0,
-                });
-                basic_light(
-                    &mut ecmds,
-                    Color::rgb(1.0, 0.8, 0.7),
-                    300.0,
-                    3.5,
-                    0.75,
-                    vec3(0.0, 1.6, 0.0),
-                );
-            }
+        }
+    }
+}
+
+pub fn check_enemy_at_dest(
+    mut com: Commands,
+    b: Res<GameBoard>,
+    enemies: Query<(Entity, &Transform), With<Enemy>>,
+    mut player: ResMut<PlayerState>,
+    model_assets: Res<ModelAssets>,
+    mut audio_events: ResMut<AudioEvents>,
+) {
+    for (enemy_entity, enemy_trans) in enemies.iter() {
+        if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 1.0 {
+            player.health -= 0.1;
+            com.entity(enemy_entity).despawn_recursive();
+            let mut ecmds = com.spawn_bundle(SceneBundle {
+                scene: model_assets.disc.clone(),
+                transform: Transform::from_translation(enemy_trans.translation + Vec3::Y * 0.5),
+                ..Default::default()
+            });
+            ecmds.insert(DiscExplosion {
+                speed: 9.0,
+                size: 4.0,
+                progress: 0.0,
+            });
+            **audio_events |= EXPLOSION_SOUND;
+            basic_light(
+                &mut ecmds,
+                Color::rgb(1.0, 0.8, 0.7),
+                300.0,
+                3.5,
+                0.75,
+                vec3(0.0, 1.6, 0.0),
+            );
         }
     }
 }
 
 pub fn move_flying_enemy(
     time: ResMut<GameTime>,
-    mut com: Commands,
-    mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
-    mut player: ResMut<PlayerState>,
-    model_assets: Res<ModelAssets>,
-    b: Res<GameBoard>,
+    mut enemies: Query<(&mut Transform, &mut FlyingEnemy, &Enemy)>,
 ) {
-    for (enemy_entity, mut enemy_trans, fly_enemy, enemy) in enemies.iter_mut() {
+    for (mut enemy_trans, fly_enemy, enemy) in enemies.iter_mut() {
         enemy_trans.look_at(fly_enemy.dest, Vec3::Y);
         let dir = (fly_enemy.dest - enemy_trans.translation).normalize();
         enemy_trans.translation += dir * enemy.speed * time.delta_seconds;
+    }
+}
+
+pub fn check_flying_enemy_at_dest(
+    mut com: Commands,
+    b: Res<GameBoard>,
+    enemies: Query<(Entity, &Transform), With<FlyingEnemy>>,
+    mut player: ResMut<PlayerState>,
+    model_assets: Res<ModelAssets>,
+    mut audio_events: ResMut<AudioEvents>,
+) {
+    for (enemy_entity, enemy_trans) in enemies.iter() {
         if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 0.5 {
             player.health -= 0.05;
             com.entity(enemy_entity).despawn_recursive();
@@ -375,6 +431,7 @@ pub fn move_flying_enemy(
                 size: 4.0,
                 progress: 0.0,
             });
+            **audio_events |= EXPLOSION_SOUND;
             basic_light(
                 &mut ecmds,
                 Color::rgb(1.0, 0.8, 0.7),

@@ -6,6 +6,7 @@ use assets::{AudioAssets, FontAssets, GameState, ModelAssets};
 use audio::GameAudioPlugin;
 use bevy::{
     asset::AssetServerSettings,
+    ecs::system::EntityCommands,
     math::*,
     prelude::*,
     render::camera::Projection,
@@ -17,17 +18,12 @@ use bevy_mod_raycast::{RayCastMesh, RayCastSource};
 
 use bevy_scene_hook::{HookPlugin, HookedSceneBundle, SceneHook};
 use board::GameBoard;
-use enemies::{
-    destroy_enemies, move_enemy_along_path, move_flying_enemy, spawn_flying_enemy,
-    spawn_rolling_enemy, spawn_rolling_enemy2, update_board_has_enemy, update_enemy_paths,
-    update_enemy_postgame_paths, update_flying_enemy_postgame_dest,
-};
+
+use enemies::EnemyPlugin;
 use iyes_loopless::prelude::*;
-use player::{player_alive, MyRaycastSet, PlayerPlugin, PlayerState};
-use turrets::{
-    basic_light, bobble_shockwave_spheres, laser_point_at_enemy, position_caps,
-    progress_explosions, progress_projectiles, turret_fire, Disabled, Turret,
-};
+use player::{MyRaycastSet, PlayerPlugin, PlayerState};
+
+use turrets::{Disabled, Turret, TurretPlugin};
 use ui::GameUI;
 pub mod assets;
 pub mod audio;
@@ -54,8 +50,8 @@ fn main() {
         height: 720.0,
         position: WindowPosition::Automatic,
         resize_constraints: WindowResizeConstraints {
-            min_width: 256.0,
-            min_height: 256.0,
+            min_width: 960.0,
+            min_height: 480.0,
             ..Default::default()
         },
         scale_factor_override: Some(1.0), //Needed for some mobile devices, but disables scaling
@@ -81,7 +77,9 @@ fn main() {
     .add_plugin(GameUI)
     .add_plugin(PlayerPlugin)
     .add_plugin(HookPlugin)
-    .add_plugin(GameAudioPlugin);
+    .add_plugin(GameAudioPlugin)
+    .add_plugin(EnemyPlugin)
+    .add_plugin(TurretPlugin);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -92,35 +90,7 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::RunLevel)
-                .with_system(move_enemy_along_path)
-                .with_system(update_board_has_enemy)
-                .with_system(move_flying_enemy)
                 .with_system(destroy_base)
-                .with_system(progress_projectiles)
-                .with_system(progress_explosions)
-                .with_system(bobble_shockwave_spheres)
-                .with_system(position_caps)
-                .with_system(turret_fire)
-                .into(),
-        )
-        .add_system_set(
-            ConditionSet::new()
-                .run_in_state(GameState::RunLevel)
-                .run_if(player_alive)
-                .with_system(update_enemy_paths)
-                .with_system(spawn_rolling_enemy)
-                .with_system(spawn_rolling_enemy2)
-                .with_system(spawn_flying_enemy)
-                .with_system(destroy_enemies)
-                .with_system(laser_point_at_enemy)
-                .into(),
-        )
-        .add_system_set(
-            ConditionSet::new()
-                .run_in_state(GameState::RunLevel)
-                .run_if_not(player_alive)
-                .with_system(update_enemy_postgame_paths)
-                .with_system(update_flying_enemy_postgame_dest)
                 .into(),
         );
 
@@ -279,4 +249,27 @@ fn update_game_time(time: ResMut<Time>, mut gametime: ResMut<GameTime>) {
         gametime.seconds_since_startup += time.delta_seconds_f64() * gametime.time_multiplier;
         gametime.time_since_startup += delta;
     }
+}
+
+pub fn basic_light(
+    cmds: &mut EntityCommands,
+    color: Color,
+    intensity: f32,
+    range: f32,
+    radius: f32,
+    trans: Vec3,
+) {
+    cmds.add_children(|parent| {
+        parent.spawn_bundle(PointLightBundle {
+            point_light: PointLight {
+                color,
+                intensity,
+                range,
+                radius,
+                ..default()
+            },
+            transform: Transform::from_translation(trans),
+            ..default()
+        });
+    });
 }

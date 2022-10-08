@@ -1,9 +1,10 @@
 use bevy::{math::*, prelude::*};
-use bevy_kira_audio::AudioControl;
+
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 
 use crate::{
-    assets::{AudioAssets, ModelAssets},
+    assets::ModelAssets,
+    audio::{AudioEvents, EXPLOSION_SOUND},
     board::GameBoard,
     player::{PlayerState, GAMESETTINGS},
     turrets::{basic_light, DiscExplosion},
@@ -11,7 +12,7 @@ use crate::{
     GameTime,
 };
 
-use rand::{seq::SliceRandom, Rng};
+use rand::Rng;
 #[derive(Component, Default)]
 pub struct EnemyPath {
     pub path: Option<(Vec<IVec2>, u32)>,
@@ -219,35 +220,15 @@ pub fn destroy_enemies(
     mut com: Commands,
     enemies: Query<(Entity, &Health), With<Enemy>>,
     mut player: ResMut<PlayerState>,
-    audio_assets: Res<AudioAssets>,
-    audio: Res<bevy_kira_audio::Audio>,
-    pref: Res<Preferences>,
+    mut audio_events: ResMut<AudioEvents>,
 ) {
-    let mut killed_enemy = 0;
     for (entity, health) in enemies.iter() {
         if health.0 < 0.0 {
             com.entity(entity).despawn_recursive();
             player.credits += GAMESETTINGS.credits_for_kill;
             player.kills += 1;
-            killed_enemy += 1;
+            **audio_events |= EXPLOSION_SOUND;
         }
-    }
-    if killed_enemy > 0 && pref.sfx > 0.001 {
-        audio
-            .play(
-                [
-                    audio_assets.exp1.clone(),
-                    audio_assets.exp2.clone(),
-                    audio_assets.exp3.clone(),
-                    audio_assets.exp4.clone(),
-                    audio_assets.exp5.clone(),
-                    audio_assets.exp6.clone(),
-                ]
-                .choose(&mut rand::thread_rng())
-                .unwrap()
-                .clone(),
-            )
-            .with_volume(pref.sfx);
     }
 }
 

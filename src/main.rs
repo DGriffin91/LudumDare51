@@ -3,6 +3,7 @@
 use std::{f32::consts::TAU, time::Duration};
 
 use assets::{AudioAssets, FontAssets, GameState, ModelAssets};
+use audio::GameAudioPlugin;
 use bevy::{
     asset::AssetServerSettings,
     math::*,
@@ -11,7 +12,6 @@ use bevy::{
     window::{PresentMode, WindowMode, WindowResizeConstraints},
 };
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
-use bevy_kira_audio::{AudioControl, AudioInstance, AudioPlugin, AudioSettings, AudioTween};
 
 use bevy_mod_raycast::{RayCastMesh, RayCastSource};
 
@@ -30,6 +30,7 @@ use turrets::{
 };
 use ui::GameUI;
 pub mod assets;
+pub mod audio;
 pub mod board;
 pub mod enemies;
 pub mod player;
@@ -69,8 +70,6 @@ fn main() {
         fit_canvas_to_parent: true,
     })
     .insert_resource(GameTime::default())
-    .insert_resource(ConLaserAudioHandle::default())
-    .insert_resource(MusicAudioHandle::default())
     .add_system(update_game_time)
     .insert_resource(AssetServerSettings {
         watch_for_changes: true,
@@ -82,11 +81,7 @@ fn main() {
     .add_plugin(GameUI)
     .add_plugin(PlayerPlugin)
     .add_plugin(HookPlugin)
-    .insert_resource(AudioSettings {
-        sound_capacity: 32,
-        command_capacity: 32,
-    })
-    .add_plugin(AudioPlugin);
+    .add_plugin(GameAudioPlugin);
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -141,10 +136,6 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     model_assets: Res<ModelAssets>,
     b: Res<GameBoard>,
-    audio_assets: Res<AudioAssets>,
-    audio: Res<bevy_kira_audio::Audio>,
-    mut con_laser_h: ResMut<ConLaserAudioHandle>,
-    mut music_h: ResMut<MusicAudioHandle>,
 ) {
     // com.insert_resource(DefaultPluginState::<MyRaycastSet>::default().with_debug_cursor());
     // plane
@@ -194,28 +185,7 @@ fn setup(
 
     // Main Base
     spawn_main_base(&mut com, &model_assets, &b);
-
-    let inst = audio
-        .play(audio_assets.con_laser.clone())
-        .with_volume(0.0)
-        .looped()
-        .handle();
-    con_laser_h.0 = Some(inst);
-
-    let inst = audio
-        .play(audio_assets.music.clone())
-        .with_volume(0.15)
-        .fade_in(AudioTween::linear(Duration::from_secs_f32(10.0)))
-        .looped()
-        .handle();
-    music_h.0 = Some(inst);
 }
-
-#[derive(Default)]
-pub struct ConLaserAudioHandle(pub Option<Handle<AudioInstance>>);
-
-#[derive(Default)]
-pub struct MusicAudioHandle(pub Option<Handle<AudioInstance>>);
 
 fn spawn_main_base(com: &mut Commands, model_assets: &ModelAssets, b: &GameBoard) {
     let mut ecmds = com.spawn();

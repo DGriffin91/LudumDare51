@@ -4,17 +4,15 @@ use std::time::Duration;
 use bevy::ecs::system::EntityCommands;
 use bevy::math::*;
 use bevy::prelude::*;
-use bevy_kira_audio::AudioControl;
-use bevy_kira_audio::AudioInstance;
-use bevy_kira_audio::AudioTween;
 use bevy_scene_hook::HookedSceneBundle;
 use bevy_scene_hook::SceneHook;
-use rand::seq::SliceRandom;
 
-use crate::assets::AudioAssets;
+use crate::audio::AudioEvents;
+use crate::audio::CONTINUOUS_LASER_SOUND;
+use crate::audio::LASER_SOUND;
+use crate::audio::WAVE_SOUND;
 use crate::player::PlayerState;
 use crate::ui::Preferences;
-use crate::ConLaserAudioHandle;
 use crate::GameTime;
 use crate::{
     assets::ModelAssets,
@@ -225,16 +223,9 @@ pub fn turret_fire(
     mut continuous_laser_light: Query<(&Parent, &mut PointLight)>,
     player: Res<PlayerState>,
     pref: Res<Preferences>,
-    audio_assets: Res<AudioAssets>,
-    audio: Res<bevy_kira_audio::Audio>,
-    mut audio_instances: ResMut<Assets<AudioInstance>>,
-    con_laser_h: Res<ConLaserAudioHandle>,
+    mut audio_events: ResMut<AudioEvents>,
     // almost 16! 1 left
 ) {
-    let mut any_con_laser = false;
-    let mut laser_sound = false;
-    let mut wave_sound = false;
-
     for (mut vis, _laser) in diamond_lasers.iter_mut() {
         vis.is_visible = false;
     }
@@ -298,7 +289,7 @@ pub fn turret_fire(
                                         Vec3::Y * -0.5,
                                     );
                                 }
-                                laser_sound = true;
+                                **audio_events |= LASER_SOUND;
                             }
                         }
                     }
@@ -312,7 +303,7 @@ pub fn turret_fire(
                                 for (mut vis, laser) in diamond_lasers.iter_mut() {
                                     if laser.top_parent == turret_entity {
                                         vis.is_visible = true;
-                                        any_con_laser = true;
+                                        **audio_events |= CONTINUOUS_LASER_SOUND;
                                     }
                                 }
                                 for (mut trans, mut vis, laser) in laser_beams.iter_mut() {
@@ -369,50 +360,11 @@ pub fn turret_fire(
                                     Vec3::Y,
                                 );
                             }
-                            wave_sound = true;
+                            **audio_events |= WAVE_SOUND;
                         }
                     }
                 }
             }
-        }
-    }
-    if laser_sound && pref.sfx > 0.001 {
-        audio
-            .play(
-                [
-                    audio_assets.laser1.clone(),
-                    audio_assets.laser2.clone(),
-                    audio_assets.laser3.clone(),
-                    audio_assets.laser4.clone(),
-                ]
-                .choose(&mut rand::thread_rng())
-                .unwrap()
-                .clone(),
-            )
-            .with_volume(pref.sfx * 0.65);
-    }
-    if wave_sound && pref.sfx > 0.001 {
-        audio
-            .play(
-                [
-                    audio_assets.wave1.clone(),
-                    audio_assets.wave2.clone(),
-                    audio_assets.wave3.clone(),
-                    audio_assets.wave4.clone(),
-                ]
-                .choose(&mut rand::thread_rng())
-                .unwrap()
-                .clone(),
-            )
-            .with_volume(pref.sfx);
-    }
-    if let Some(con_laser_h) = &con_laser_h.0 {
-        if let Some(instance) = audio_instances.get_mut(con_laser_h) {
-            let mut vol = 0.0;
-            if any_con_laser {
-                vol = pref.sfx;
-            }
-            instance.set_volume(vol, AudioTween::linear(Duration::from_secs_f32(0.1)));
         }
     }
 }

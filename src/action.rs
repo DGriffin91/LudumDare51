@@ -2,12 +2,12 @@ use bevy::{math::*, prelude::*};
 use iyes_loopless::prelude::*;
 
 use crate::{
-    assets::{GameState, ModelAssets},
+    assets::ModelAssets,
     board::GameBoard,
     player::PlayerState,
     turrets::Turret,
     ui::{Preferences, RestartEvent},
-    GameTime,
+    GameState, GameTime,
 };
 
 pub struct ActionPlugin;
@@ -17,6 +17,8 @@ impl Plugin for ActionPlugin {
         app.add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::RunLevel)
+                .label("STEP ACTION")
+                .after("STEP TURRET")
                 .with_system(process_actions)
                 .into(),
         );

@@ -5,16 +5,18 @@ use bevy::math::*;
 use bevy::prelude::*;
 use bevy_scene_hook::HookedSceneBundle;
 use bevy_scene_hook::SceneHook;
+use bevy_system_graph::SystemGraph;
 use iyes_loopless::prelude::*;
 
-use crate::assets::GameState;
 use crate::audio::AudioEvents;
 use crate::audio::CONTINUOUS_LASER_SOUND;
 use crate::audio::LASER_SOUND;
 use crate::audio::WAVE_SOUND;
 use crate::basic_light;
+use crate::game_state_run_level;
 use crate::player::PlayerState;
 use crate::ui::Preferences;
+
 use crate::GameTime;
 use crate::{
     assets::ModelAssets,
@@ -25,20 +27,20 @@ pub struct TurretPlugin;
 impl Plugin for TurretPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system_set(
-            ConditionSet::new()
-                .run_in_state(GameState::RunLevel)
-                .with_system(progress_projectiles)
-                .with_system(progress_explosions)
-                .with_system(bobble_shockwave_spheres)
-                .with_system(position_caps)
-                .with_system(turret_fire)
-                .into(),
-        )
-        .add_system_set(
-            ConditionSet::new()
-                .run_in_state(GameState::RunLevel)
-                .with_system(laser_point_at_enemy)
-                .into(),
+            Into::<SystemSet>::into(
+                SystemGraph::new()
+                    .root(progress_projectiles)
+                    .then(progress_explosions)
+                    .then(bobble_shockwave_spheres)
+                    .then(position_caps)
+                    .then(reset_turret_gfx)
+                    .then(turret_fire)
+                    .then(blaster_point_at_enemy)
+                    .graph(),
+            )
+            .with_run_criteria(game_state_run_level)
+            .label("STEP TURRET")
+            .after("STEP ENEMIES"),
         );
     }
 }
@@ -68,6 +70,9 @@ pub struct Cooldown(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct Range(f32);
+
+#[derive(Component)]
+pub struct ContinuousLaserLight;
 
 impl Turret {
     pub fn spawn_shockwave_turret(
@@ -183,14 +188,22 @@ impl Turret {
             .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.1), false)))
             .insert(Range(16.0))
             .insert(Turret::Laser);
-        basic_light(
-            &mut ecmds,
-            Color::hex("68FF72").unwrap(),
-            110.0,
-            2.2 * pref.light_r,
-            0.5,
-            vec3(0.0, 1.0, 0.0),
-        );
+
+        ecmds.add_children(|parent| {
+            parent
+                .spawn_bundle(PointLightBundle {
+                    point_light: PointLight {
+                        color: Color::hex("68FF72").unwrap(),
+                        intensity: 110.0,
+                        range: 2.2 * pref.light_r,
+                        radius: 0.5,
+                        ..default()
+                    },
+                    transform: Transform::from_translation(vec3(0.0, 1.0, 0.0)),
+                    ..default()
+                })
+                .insert(ContinuousLaserLight);
+        });
 
         ecmds.insert_bundle(HookedSceneBundle {
             scene: SceneBundle {
@@ -218,6 +231,22 @@ impl Turret {
     }
 }
 
+pub fn reset_turret_gfx(
+    mut diamond_lasers: Query<&mut Visibility, (With<DiamondLasers>, Without<LaserBeam>)>,
+    mut laser_beams: Query<&mut Visibility, (With<LaserBeam>, Without<DiamondLasers>)>,
+    mut continuous_laser_light: Query<&mut PointLight, With<ContinuousLaserLight>>,
+) {
+    for mut vis in diamond_lasers.iter_mut() {
+        vis.is_visible = false;
+    }
+    for mut vis in laser_beams.iter_mut() {
+        vis.is_visible = false;
+    }
+    for mut light in continuous_laser_light.iter_mut() {
+        light.intensity = 90.0;
+    }
+}
+
 pub fn turret_fire(
     mut com: Commands,
     time: ResMut<GameTime>,
@@ -242,22 +271,21 @@ pub fn turret_fire(
     >,
     model_assets: Res<ModelAssets>,
     mut caps: Query<&mut Cap>,
-    mut diamond_lasers: Query<(&mut Visibility, &DiamondLasers), Without<LaserBeam>>,
-    mut laser_beams: Query<(&mut Transform, &mut Visibility, &LaserBeam), Without<DiamondLasers>>,
-    mut continuous_laser_light: Query<(&Parent, &mut PointLight)>,
+    mut diamond_lasers: Query<
+        (&mut Visibility, &DiamondLasers),
+        (With<DiamondLasers>, Without<LaserBeam>),
+    >,
+    mut laser_beams: Query<
+        (&mut Transform, &mut Visibility, &LaserBeam),
+        (With<LaserBeam>, Without<DiamondLasers>),
+    >,
+    mut continuous_laser_light: Query<(&Parent, &mut PointLight), With<ContinuousLaserLight>>,
     player: Res<PlayerState>,
     pref: Res<Preferences>,
     mut audio_events: ResMut<AudioEvents>,
-    // almost 16! 1 left
 ) {
-    for (mut vis, _laser) in diamond_lasers.iter_mut() {
-        vis.is_visible = false;
-    }
-    for (_, mut vis, _laser) in laser_beams.iter_mut() {
-        vis.is_visible = false;
-    }
-    for (_parent, mut light) in continuous_laser_light.iter_mut() {
-        light.intensity = 90.0;
+    if !player.alive() {
+        return;
     }
 
     for (turret_entity, turret_trans, damage, range, mut cooldown, turret) in turrets.iter_mut() {
@@ -393,14 +421,18 @@ pub fn turret_fire(
     }
 }
 
-pub fn laser_point_at_enemy(
+pub fn blaster_point_at_enemy(
     mut turrets: Query<
         (Entity, &mut Transform, &Range),
         (With<Turret>, Without<Swivel>, Without<Disabled>),
     >,
     mut swivels: Query<(&mut Transform, &Swivel), Without<Turret>>,
     mut enemies: Query<&Transform, (With<Enemy>, (Without<Turret>, Without<Swivel>))>,
+    player: Res<PlayerState>,
 ) {
+    if !player.alive() {
+        return;
+    }
     for (turret_entity, turret_trans, _range) in turrets.iter_mut() {
         let mut closest = Vec3::ZERO;
         let mut closest_dist = INFINITY;

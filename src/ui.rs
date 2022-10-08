@@ -6,7 +6,6 @@ use iyes_loopless::prelude::ConditionSet;
 
 use crate::action::Action;
 use crate::action::ActionQueue;
-use crate::assets::GameState;
 use crate::assets::ModelAssets;
 use crate::audio::AudioEvents;
 use crate::audio::MUSIC_LEVEL_CHANGED;
@@ -15,6 +14,7 @@ use crate::board::GameBoard;
 use crate::enemies::Enemy;
 use crate::spawn_main_base;
 use crate::turrets::Projectile;
+use crate::GameState;
 use crate::GameTime;
 use crate::MainBase;
 use crate::MainBaseDestroyed;
@@ -27,6 +27,8 @@ impl Plugin for GameUI {
             .insert_resource(Preferences::default())
             .add_system_set(
                 ConditionSet::new()
+                    .label("STEP UI")
+                    .before("STEP ENEMIES")
                     .run_in_state(GameState::RunLevel)
                     .with_system(ui_sidebar)
                     .with_system(restart_game)

@@ -3,11 +3,11 @@
 use std::{f32::consts::TAU, time::Duration};
 
 use action::ActionPlugin;
-use assets::{AudioAssets, FontAssets, GameState, ModelAssets};
+use assets::{AudioAssets, FontAssets, ModelAssets};
 use audio::GameAudioPlugin;
 use bevy::{
     asset::AssetServerSettings,
-    ecs::system::EntityCommands,
+    ecs::{schedule::ShouldRun, system::EntityCommands},
     math::*,
     prelude::*,
     render::camera::Projection,
@@ -93,7 +93,7 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::RunLevel)
-                .with_system(destroy_base)
+                .with_system(destroy_base_disable_turrets)
                 .into(),
         );
 
@@ -188,7 +188,7 @@ struct MainBase;
 #[derive(Component)]
 struct MainBaseDestroyed;
 
-fn destroy_base(
+fn destroy_base_disable_turrets(
     mut com: Commands,
     player: Res<PlayerState>,
     main_base: Query<(Entity, &Transform), With<MainBase>>,
@@ -275,4 +275,26 @@ pub fn basic_light(
             ..default()
         });
     });
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub enum GameState {
+    AssetLoading,
+    RunLevel,
+}
+
+pub fn game_state_asset_loading(state: Res<CurrentState<GameState>>) -> ShouldRun {
+    if *state == CurrentState(GameState::AssetLoading) {
+        ShouldRun::Yes
+    } else {
+        ShouldRun::No
+    }
+}
+
+pub fn game_state_run_level(state: Res<CurrentState<GameState>>) -> ShouldRun {
+    if *state == CurrentState(GameState::RunLevel) {
+        ShouldRun::Yes
+    } else {
+        ShouldRun::No
+    }
 }

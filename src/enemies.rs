@@ -1,17 +1,19 @@
 use bevy::{math::*, prelude::*};
 
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
+use bevy_system_graph::SystemGraph;
 use iyes_loopless::prelude::*;
 
 use crate::{
-    assets::{GameState, ModelAssets},
+    assets::ModelAssets,
     audio::{AudioEvents, EXPLOSION_SOUND},
     basic_light,
     board::GameBoard,
-    player::{player_alive, PlayerState, GAMESETTINGS},
+    game_state_run_level,
+    player::{PlayerState, GAMESETTINGS},
     turrets::DiscExplosion,
     ui::{Preferences, RestartEvent},
-    GameTime,
+    GameState, GameTime,
 };
 
 use rand::Rng;
@@ -20,33 +22,24 @@ pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system_set(
-            ConditionSet::new()
-                .run_in_state(GameState::RunLevel)
-                .with_system(move_enemy_along_path)
-                .with_system(check_enemy_at_dest)
-                .with_system(move_flying_enemy)
-                .with_system(check_flying_enemy_at_dest)
-                .with_system(update_board_has_enemy)
-                .into(),
-        )
-        .add_system_set(
-            ConditionSet::new()
-                .run_in_state(GameState::RunLevel)
-                .run_if(player_alive)
-                .with_system(update_enemy_paths)
-                .with_system(spawn_rolling_enemy)
-                .with_system(spawn_rolling_enemy2)
-                .with_system(spawn_flying_enemy)
-                .with_system(destroy_enemies)
-                .into(),
-        )
-        .add_system_set(
-            ConditionSet::new()
-                .run_in_state(GameState::RunLevel)
-                .run_if_not(player_alive)
-                .with_system(update_enemy_postgame_paths)
-                .with_system(update_flying_enemy_postgame_dest)
-                .into(),
+            Into::<SystemSet>::into(
+                SystemGraph::new()
+                    .root(destroy_enemies)
+                    .then(spawn_rolling_enemy)
+                    .then(spawn_rolling_enemy2)
+                    .then(spawn_flying_enemy)
+                    .then(update_enemy_paths)
+                    .then(update_board_has_enemy)
+                    .then(move_enemy_along_path)
+                    .then(move_flying_enemy)
+                    .then(check_enemy_at_dest)
+                    .then(check_flying_enemy_at_dest)
+                    .then(update_enemy_postgame_paths)
+                    .then(update_flying_enemy_postgame_dest)
+                    .graph(),
+            )
+            .with_run_criteria(game_state_run_level)
+            .label("STEP ENEMIES"),
         );
     }
 }
@@ -81,6 +74,9 @@ pub fn spawn_rolling_enemy(
     mut restart_events: EventReader<RestartEvent>,
     pref: Res<Preferences>,
 ) {
+    if !player.alive() {
+        return;
+    }
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
     }
@@ -137,6 +133,9 @@ pub fn spawn_rolling_enemy2(
     mut restart_events: EventReader<RestartEvent>,
     pref: Res<Preferences>,
 ) {
+    if !player.alive() {
+        return;
+    }
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
     }
@@ -193,6 +192,9 @@ pub fn spawn_flying_enemy(
     mut restart_events: EventReader<RestartEvent>,
     pref: Res<Preferences>,
 ) {
+    if !player.alive() {
+        return;
+    }
     for _ in restart_events.iter() {
         *last_spawn = 0.0;
     }
@@ -260,6 +262,9 @@ pub fn destroy_enemies(
     mut player: ResMut<PlayerState>,
     mut audio_events: ResMut<AudioEvents>,
 ) {
+    if !player.alive() {
+        return;
+    }
     for (entity, health) in enemies.iter() {
         if health.0 < 0.0 {
             com.entity(entity).despawn_recursive();
@@ -281,7 +286,14 @@ pub fn update_board_has_enemy(enemies: Query<&Transform, With<Enemy>>, mut b: Re
 #[derive(Component)]
 pub struct PathInd;
 
-pub fn update_enemy_paths(b: Res<GameBoard>, mut enemies: Query<(&Transform, &mut EnemyPath)>) {
+pub fn update_enemy_paths(
+    b: Res<GameBoard>,
+    mut enemies: Query<(&Transform, &mut EnemyPath)>,
+    player: Res<PlayerState>,
+) {
+    if !player.alive() {
+        return;
+    }
     for (trans, mut enemy_path) in enemies.iter_mut() {
         enemy_path.path = b.path(b.ws_vec3_to_ls(trans.translation), b.dest);
     }
@@ -291,7 +303,11 @@ pub fn update_enemy_postgame_paths(
     b: Res<GameBoard>,
     mut enemies: Query<(&Transform, &mut EnemyPath)>,
     time: ResMut<GameTime>,
+    player: Res<PlayerState>,
 ) {
+    if player.alive() {
+        return;
+    }
     let mut rng = rand::thread_rng();
     for (trans, mut enemy_path) in enemies.iter_mut() {
         enemy_path.new_rand_loc_timer -= time.delta_seconds;
@@ -447,7 +463,11 @@ pub fn check_flying_enemy_at_dest(
 pub fn update_flying_enemy_postgame_dest(
     time: ResMut<GameTime>,
     mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
+    player: Res<PlayerState>,
 ) {
+    if player.alive() {
+        return;
+    }
     let mut rng = rand::thread_rng();
     for (_enemy_entity, mut _enemy_trans, mut fly_enemy, _enemy) in enemies.iter_mut() {
         fly_enemy.new_rand_loc_timer -= time.delta_seconds;

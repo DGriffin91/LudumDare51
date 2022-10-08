@@ -2,14 +2,15 @@ use bevy::{math::*, prelude::*};
 use bevy_mod_raycast::{
     DefaultRaycastingPlugin, Intersection, RayCastMethod, RayCastSource, RaycastSystem,
 };
+use bevy_system_graph::SystemGraph;
 use iyes_loopless::prelude::*;
 
 use crate::{
     action::{Action, ActionQueue},
-    assets::GameState,
     board::GameBoard,
+    game_state_run_level,
     turrets::Turret,
-    GameTime,
+    GameState, GameTime,
 };
 
 pub struct GameSettings {
@@ -91,6 +92,10 @@ impl PlayerState {
     pub fn laser_upgrade_cost(&self) -> u64 {
         (self.laser_upgrade.powi(2) * 25.0) as u64
     }
+
+    pub fn alive(&self) -> bool {
+        self.health > 0.0
+    }
 }
 
 impl Default for PlayerState {
@@ -116,34 +121,32 @@ impl Plugin for PlayerPlugin {
         app.add_plugin(DefaultRaycastingPlugin::<MyRaycastSet>::default())
             .insert_resource(PlayerState::default())
             .add_enter_system(GameState::RunLevel, setup)
-            .add_system_set(
-                ConditionSet::new()
-                    .run_in_state(GameState::RunLevel)
-                    .with_system(mouse_interact)
-                    .into(),
-            )
-            .add_system_set(
-                ConditionSet::new()
-                    .run_in_state(GameState::RunLevel)
-                    .run_if(player_alive)
-                    .with_system(set_level)
-                    .into(),
-            )
             .add_system_to_stage(
                 CoreStage::First,
                 update_raycast_with_cursor.before(RaycastSystem::BuildRays::<MyRaycastSet>),
             );
+
+        app.add_system_set(
+            Into::<SystemSet>::into(
+                SystemGraph::new()
+                    .root(set_level)
+                    .then(mouse_interact)
+                    .graph(),
+            )
+            .with_run_criteria(game_state_run_level)
+            .label("STEP PLAYER")
+            .before("STEP ENEMIES"),
+        );
         //.add_plugins(DefaultPickingPlugins)
         //.add_plugin(DebugCursorPickingPlugin)
         //.add_plugin(DebugEventsPickingPlugin)
     }
 }
 
-pub fn player_alive(player: Res<PlayerState>) -> bool {
-    player.health > 0.0
-}
-
 fn set_level(time: ResMut<GameTime>, mut player: ResMut<PlayerState>) {
+    if !player.alive() {
+        return;
+    }
     player.level_time += time.delta_seconds;
     player.level = (player.level_time / 10.0).floor();
 }

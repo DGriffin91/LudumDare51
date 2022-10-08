@@ -3,10 +3,7 @@ use std::time::Duration;
 use bevy_kira_audio::{AudioControl, AudioInstance, AudioPlugin, AudioSettings, AudioTween};
 use rand::seq::SliceRandom;
 
-use crate::{
-    assets::{AudioAssets, GameState},
-    ui::Preferences,
-};
+use crate::{assets::AudioAssets, ui::Preferences, GameState};
 
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;

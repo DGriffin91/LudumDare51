@@ -18,6 +18,7 @@ bevy_mod_raycast = "0.6"
 iyes_loopless = "0.7"
 bevy-scene-hook = "4.0"
 rand = "0.8"
+bevy_system_graph = "0.3"
 
 # Enable only a small amount of optimization in debug mode
 [profile.dev]

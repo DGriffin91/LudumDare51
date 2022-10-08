@@ -2,12 +2,6 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
-pub enum GameState {
-    AssetLoading,
-    RunLevel,
-}
-
 #[derive(AssetCollection)]
 pub struct FontAssets {
     #[asset(path = "fonts/ShareTechMono-Regular.ttf")]

@@ -6,7 +6,6 @@ use bevy::prelude::*;
 use bevy_scene_hook::HookedSceneBundle;
 use bevy_scene_hook::SceneHook;
 use bevy_system_graph::SystemGraph;
-use iyes_loopless::prelude::*;
 
 use crate::audio::AudioEvents;
 use crate::audio::CONTINUOUS_LASER_SOUND;

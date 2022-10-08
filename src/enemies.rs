@@ -2,7 +2,6 @@ use bevy::{math::*, prelude::*};
 
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 use bevy_system_graph::SystemGraph;
-use iyes_loopless::prelude::*;
 
 use crate::{
     assets::ModelAssets,
@@ -13,7 +12,7 @@ use crate::{
     player::{PlayerState, GAMESETTINGS},
     turrets::DiscExplosion,
     ui::{Preferences, RestartEvent},
-    GameState, GameTime,
+    GameTime,
 };
 
 use rand::Rng;

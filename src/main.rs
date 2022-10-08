@@ -2,6 +2,7 @@
 
 use std::{f32::consts::TAU, time::Duration};
 
+use action::ActionPlugin;
 use assets::{AudioAssets, FontAssets, GameState, ModelAssets};
 use audio::GameAudioPlugin;
 use bevy::{
@@ -25,6 +26,7 @@ use player::{MyRaycastSet, PlayerPlugin, PlayerState};
 
 use turrets::{Disabled, Turret, TurretPlugin};
 use ui::GameUI;
+pub mod action;
 pub mod assets;
 pub mod audio;
 pub mod board;
@@ -79,7 +81,8 @@ fn main() {
     .add_plugin(HookPlugin)
     .add_plugin(GameAudioPlugin)
     .add_plugin(EnemyPlugin)
-    .add_plugin(TurretPlugin);
+    .add_plugin(TurretPlugin)
+    .add_plugin(ActionPlugin);
 
     #[cfg(target_arch = "wasm32")]
     {

@@ -18,11 +18,11 @@ pub struct FontAssets {
 pub struct ModelAssets {
     // --- Units ---
     #[asset(path = "models/units/laser.glb#Scene0")]
-    pub laser_turret: Handle<Scene>,
+    pub blaster_turret: Handle<Scene>,
     #[asset(path = "models/units/shockwave.glb#Scene0")]
-    pub shockwave_turret: Handle<Scene>,
+    pub wave_turret: Handle<Scene>,
     #[asset(path = "models/units/laser_turret_2.glb#Scene0")]
-    pub laser_turret_2: Handle<Scene>,
+    pub laser_turret: Handle<Scene>,
 
     #[asset(path = "models/units/rolling_unit.glb#Scene0")]
     pub rolling_enemy: Handle<Scene>,

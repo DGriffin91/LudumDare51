@@ -45,17 +45,17 @@ impl Plugin for TurretPlugin {
 
 #[derive(Clone, Copy, Component, PartialEq, Eq)]
 pub enum Turret {
+    Blaster,
     Laser,
-    LaserContinuous,
-    Shockwave,
+    Wave,
 }
 
 impl Turret {
     pub fn cost(&self) -> u64 {
         match self {
-            Turret::Laser => 100,
-            Turret::Shockwave => 200,
-            Turret::LaserContinuous => 300,
+            Turret::Blaster => 100,
+            Turret::Wave => 200,
+            Turret::Laser => 300,
         }
     }
 }
@@ -83,7 +83,7 @@ impl Turret {
             .insert(AttackDamage(0.1))
             .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.9), true)))
             .insert(Range(4.0))
-            .insert(Turret::Shockwave);
+            .insert(Turret::Wave);
         basic_light(
             &mut ecmds,
             Color::rgb(1.0, 0.2, 1.0),
@@ -95,7 +95,7 @@ impl Turret {
 
         ecmds.insert_bundle(HookedSceneBundle {
             scene: SceneBundle {
-                scene: model_assets.shockwave_turret.clone(),
+                scene: model_assets.wave_turret.clone(),
                 transform: Transform::from_translation(trans),
                 ..default()
             },
@@ -125,10 +125,10 @@ impl Turret {
             }),
         });
 
-        (Turret::Shockwave, entity_id)
+        (Turret::Wave, entity_id)
     }
 
-    pub fn spawn_laser_turret(
+    pub fn spawn_blaster_turret(
         com: &mut Commands,
         trans: Vec3,
         model_assets: &ModelAssets,
@@ -140,7 +140,7 @@ impl Turret {
             .insert(AttackDamage(0.02))
             .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.5), true)))
             .insert(Range(10.0))
-            .insert(Turret::Laser);
+            .insert(Turret::Blaster);
         basic_light(
             &mut ecmds,
             Color::rgb(0.3, 0.0, 1.0),
@@ -152,7 +152,7 @@ impl Turret {
 
         ecmds.insert_bundle(HookedSceneBundle {
             scene: SceneBundle {
-                scene: model_assets.laser_turret.clone(),
+                scene: model_assets.blaster_turret.clone(),
                 transform: Transform::from_translation(trans),
                 ..default()
             },
@@ -167,7 +167,7 @@ impl Turret {
             }),
         });
 
-        (Turret::Laser, entity_id)
+        (Turret::Blaster, entity_id)
     }
 
     pub fn spawn_laser_continuous_turret(
@@ -182,7 +182,7 @@ impl Turret {
             .insert(AttackDamage(0.35))
             .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.1), false)))
             .insert(Range(16.0))
-            .insert(Turret::LaserContinuous);
+            .insert(Turret::Laser);
         basic_light(
             &mut ecmds,
             Color::hex("68FF72").unwrap(),
@@ -194,7 +194,7 @@ impl Turret {
 
         ecmds.insert_bundle(HookedSceneBundle {
             scene: SceneBundle {
-                scene: model_assets.laser_turret_2.clone(),
+                scene: model_assets.laser_turret.clone(),
                 transform: Transform::from_translation(trans),
                 ..default()
             },
@@ -214,7 +214,7 @@ impl Turret {
             }),
         });
 
-        (Turret::Laser, entity_id)
+        (Turret::Blaster, entity_id)
     }
 }
 
@@ -276,7 +276,7 @@ pub fn turret_fire(
 
         if cooldown.finished() {
             match turret {
-                Turret::Laser => {
+                Turret::Blaster => {
                     if let Some(entity) = closest {
                         if let Ok((entity, enemy_trans, mut _health)) = enemies.get_mut(entity) {
                             let dist = enemy_trans.translation.distance(turret_trans.translation);
@@ -318,7 +318,7 @@ pub fn turret_fire(
                         }
                     }
                 }
-                Turret::LaserContinuous => {
+                Turret::Laser => {
                     if let Some(entity) = closest {
                         if let Ok((_entity, enemy_trans, mut health)) = enemies.get_mut(entity) {
                             if closest_dist < **range {
@@ -351,7 +351,7 @@ pub fn turret_fire(
                         }
                     }
                 }
-                Turret::Shockwave => {
+                Turret::Wave => {
                     for (_entity, enemy_trans, mut health) in enemies.iter_mut() {
                         let dist = enemy_trans.translation.distance(turret_trans.translation);
                         if dist < **range {

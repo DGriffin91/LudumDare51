@@ -4,6 +4,8 @@ use bevy_egui::egui::Color32;
 use bevy_egui::{egui::FontDefinitions, *};
 use iyes_loopless::prelude::ConditionSet;
 
+use crate::action::Action;
+use crate::action::ActionQueue;
 use crate::assets::GameState;
 use crate::assets::ModelAssets;
 use crate::audio::AudioEvents;
@@ -48,13 +50,13 @@ fn select_button(ui: &mut egui::Ui, text: &str, selected: bool) -> bool {
 }
 
 fn ui_sidebar(
-    mut time: ResMut<GameTime>,
+    time: Res<GameTime>,
     mut egui_context: ResMut<EguiContext>,
     mut player: ResMut<PlayerState>,
     mut windows: ResMut<Windows>,
-    mut restart: EventWriter<RestartEvent>,
     mut pref: ResMut<Preferences>,
     mut audio_events: ResMut<AudioEvents>,
+    mut action_queue: ResMut<ActionQueue>,
 ) {
     let window = windows.get_primary_mut().unwrap();
     let my_frame = egui::containers::Frame {
@@ -79,13 +81,13 @@ fn ui_sidebar(
                 #[cfg(debug_assertions)]
                 {
                     if ui.button("CREDITS").clicked() {
-                        player.credits += 1000;
+                        action_queue.push(Action::CheatCredits);
                     }
                     if ui.button("HEALTH").clicked() {
-                        player.health += 1000.0;
+                        action_queue.push(Action::CheatHealth);
                     }
                     if ui.button("NEXT LEVEL").clicked() {
-                        player.level_time += 10.0;
+                        action_queue.push(Action::CheatLevel);
                     }
                 }
                 let v = 1.0 - (player.level_time * 0.1 - player.level).fract();
@@ -102,9 +104,9 @@ fn ui_sidebar(
                     ui.label("");
                     ui.label("TURRETS");
                     for (message, turret) in [
-                        ("BLASTER", Turret::Laser),
-                        ("WAVE   ", Turret::Shockwave),
-                        ("LASER  ", Turret::LaserContinuous),
+                        ("BLASTER", Turret::Blaster),
+                        ("WAVE   ", Turret::Wave),
+                        ("LASER  ", Turret::Laser),
                     ] {
                         if select_button(
                             ui,
@@ -123,36 +125,30 @@ fn ui_sidebar(
                     }
                     ui.label("");
                     ui.label("UPGRADES +5%");
-                    let cost = (player.blaster_upgrade.powi(2) * 25.0) as u64;
-                    if ui.button(&format!("BLASTER {:8}", cost)).clicked() && player.credits > cost
-                    {
-                        player.blaster_upgrade *= 1.05;
-                        player.credits -= cost;
+                    let cost = player.blaster_upgrade_cost();
+                    if ui.button(&format!("BLASTER {:8}", cost)).clicked() {
+                        action_queue.push(Action::BlasterUpgrade);
                     }
-                    let cost = (player.wave_upgrade.powi(2) * 25.0) as u64;
-                    if ui.button(&format!("WAVE    {:8}", cost)).clicked() && player.credits > cost
-                    {
-                        player.wave_upgrade *= 1.05;
-                        player.credits -= cost;
+                    let cost = player.wave_upgrade_cost();
+                    if ui.button(&format!("WAVE    {:8}", cost)).clicked() {
+                        action_queue.push(Action::WaveUpgrade);
                     }
-                    let cost = (player.laser_upgrade.powi(2) * 25.0) as u64;
-                    if ui.button(&format!("LASERS  {:8}", cost)).clicked() && player.credits > cost
-                    {
-                        player.laser_upgrade *= 1.05;
-                        player.credits -= cost;
+                    let cost = player.laser_upgrade_cost();
+                    if ui.button(&format!("LASERS  {:8}", cost)).clicked() {
+                        action_queue.push(Action::LaserUpgrade);
                     }
                     ui.label("");
 
                     ui.label(&format!("GAME SPEED {:.2}", time.time_multiplier));
                     ui.horizontal(|ui| {
                         if ui.button(" -- ").clicked() {
-                            time.time_multiplier = (time.time_multiplier - 0.1).max(0.0);
+                            action_queue.push(Action::GameSpeedDec);
                         }
                         if ui.button(" ++ ").clicked() {
-                            time.time_multiplier = (time.time_multiplier + 0.1).min(10.0);
+                            action_queue.push(Action::GameSpeedInc);
                         }
                         if ui.button("PAUSE").clicked() {
-                            time.pause = !time.pause;
+                            action_queue.push(Action::GamePause);
                         }
                     });
                 }
@@ -190,7 +186,7 @@ fn ui_sidebar(
                 });
                 ui.label("");
                 if ui.button("RESTART GAME").clicked() {
-                    restart.send(RestartEvent);
+                    action_queue.push(Action::RestartGame);
                 }
             });
         });

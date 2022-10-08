@@ -5,10 +5,10 @@ use bevy_mod_raycast::{
 use iyes_loopless::prelude::*;
 
 use crate::{
-    assets::{GameState, ModelAssets},
+    action::{Action, ActionQueue},
+    assets::GameState,
     board::GameBoard,
     turrets::Turret,
-    ui::Preferences,
     GameTime,
 };
 
@@ -78,6 +78,18 @@ impl PlayerState {
         } else {
             (self.level.powf(1.32) + 1.0) / (2.0 - (self.level - 50.0) * 0.5).max(1.0)
         }
+    }
+
+    pub fn blaster_upgrade_cost(&self) -> u64 {
+        (self.blaster_upgrade.powi(2) * 25.0) as u64
+    }
+
+    pub fn wave_upgrade_cost(&self) -> u64 {
+        (self.wave_upgrade.powi(2) * 25.0) as u64
+    }
+
+    pub fn laser_upgrade_cost(&self) -> u64 {
+        (self.laser_upgrade.powi(2) * 25.0) as u64
     }
 }
 
@@ -157,14 +169,12 @@ fn setup(
 pub struct MyRaycastSet;
 
 pub fn mouse_interact(
-    mut com: Commands,
     intersections: Query<&Intersection<MyRaycastSet>>,
-    mut b: ResMut<GameBoard>,
+    b: Res<GameBoard>,
     buttons: Res<Input<MouseButton>>,
     mut game_cursor: Query<&mut Transform, With<GameCursor>>,
-    model_assets: Res<ModelAssets>,
-    mut player: ResMut<PlayerState>,
-    pref: Res<Preferences>,
+    player: Res<PlayerState>,
+    mut action_queue: ResMut<ActionQueue>,
 ) {
     let mut cursor_pos = None;
     for intersection in &intersections {
@@ -186,41 +196,21 @@ pub fn mouse_interact(
     }
     if buttons.just_pressed(MouseButton::Left) && (cursor_pos.y - 0.0).abs() < 0.1 {
         let idx = b.ls_to_idx(b.ws_vec3_to_ls(cursor_pos));
+        let ls_p = b.idx_to_ls(idx);
         if player.sell_mode {
-            let turret = b.destroy(&mut com, idx);
-            if let Some(turret) = turret {
-                // Player gets back 50% of cost when selling
-                player.credits += turret.cost() / 2;
-            }
-            // idx != 0 is to disallow placing tower in spawn
-        } else if !b.board[idx].filled && idx != 0 {
-            b.board[idx].filled = true; //Just temp fill so we can check
-            let possible_path = b.path(b.start, b.dest);
-            b.board[idx].filled = false; //Undo temp fill
-            if possible_path.is_some() {
-                if let Some(selected_turret) = player.turret_to_place {
-                    let cost = selected_turret.cost();
-                    if player.credits >= cost {
-                        player.credits -= cost;
-                        let pos = b.ls_to_ws_vec3(b.idx_to_ls(idx));
-                        b.board[idx].turret = Some(match selected_turret {
-                            Turret::Laser => {
-                                Turret::spawn_laser_turret(&mut com, pos, &model_assets, &pref)
-                            }
-                            Turret::LaserContinuous => Turret::spawn_laser_continuous_turret(
-                                &mut com,
-                                pos,
-                                &model_assets,
-                                &pref,
-                            ),
-                            Turret::Shockwave => {
-                                Turret::spawn_shockwave_turret(&mut com, pos, &model_assets, &pref)
-                            }
-                        });
-                        b.board[idx].filled = true;
-                    }
+            action_queue.push(Action::SellTurret(ls_p.x as u8, ls_p.y as u8));
+        } else if let Some(selected_turret) = player.turret_to_place {
+            match selected_turret {
+                Turret::Blaster => {
+                    action_queue.push(Action::BlasterPlace(ls_p.x as u8, ls_p.y as u8));
                 }
-            }
+                Turret::Laser => {
+                    action_queue.push(Action::LaserPlace(ls_p.x as u8, ls_p.y as u8));
+                }
+                Turret::Wave => {
+                    action_queue.push(Action::WavePlace(ls_p.x as u8, ls_p.y as u8));
+                }
+            };
         }
     }
 }

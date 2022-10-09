@@ -1,19 +1,26 @@
+use std::time::Duration;
+
 use bevy::{math::*, prelude::*};
+use iyes_loopless::{
+    prelude::FixedTimestepInfo,
+    state::{CurrentState, NextState},
+};
 
 use crate::{
-    assets::ModelAssets, board::GameBoard, player::PlayerState, turrets::Turret, ui::Preferences,
-    GameTime, RestartGame,
+    assets::ModelAssets, board::GameBoard, player::PlayerState, schedule::TIMESTEP_MILLI,
+    turrets::Turret, ui::Preferences, PausedState, RestartGame,
 };
 
 pub fn process_actions(
     mut com: Commands,
     mut action_queue: ResMut<ActionQueue>,
     mut player: ResMut<PlayerState>,
-    mut time: ResMut<GameTime>,
     mut restart: ResMut<RestartGame>,
     model_assets: Res<ModelAssets>,
     mut b: ResMut<GameBoard>,
     pref: Res<Preferences>,
+    mut time_step_info: ResMut<FixedTimestepInfo>,
+    paused_state: Res<CurrentState<PausedState>>,
 ) {
     if action_queue.0.len() > 1 {
         // See if this ever happens
@@ -71,13 +78,21 @@ pub fn process_actions(
                 }
             }
             Action::GameSpeedDec => {
-                time.time_multiplier = (time.time_multiplier - 0.1).max(0.0);
+                player.time_multiplier = (player.time_multiplier - 0.1).max(0.1);
+                time_step_info.step =
+                    Duration::from_millis((TIMESTEP_MILLI as f64 / player.time_multiplier) as u64)
             }
             Action::GameSpeedInc => {
-                time.time_multiplier = (time.time_multiplier + 0.1).min(10.0);
+                player.time_multiplier = (player.time_multiplier + 0.1).min(10.0);
+                time_step_info.step =
+                    Duration::from_millis((TIMESTEP_MILLI as f64 / player.time_multiplier) as u64)
             }
             Action::GamePause => {
-                time.pause = !time.pause;
+                if *paused_state == CurrentState(PausedState::Paused) {
+                    com.insert_resource(NextState(PausedState::Unpaused));
+                } else {
+                    com.insert_resource(NextState(PausedState::Paused));
+                }
             }
             Action::RestartGame => {
                 **restart = true;

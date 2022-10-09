@@ -8,9 +8,9 @@ use crate::{
     basic_light,
     board::GameBoard,
     player::{PlayerState, GAMESETTINGS},
+    schedule::TIMESTEP,
     turrets::DiscExplosion,
     ui::Preferences,
-    GameTime,
 };
 
 pub struct EnemiesPlugin;
@@ -50,7 +50,6 @@ pub struct LastSpawns {
 }
 
 pub(crate) fn spawn_rolling_enemy(
-    time: ResMut<GameTime>,
     mut com: Commands,
     mut last_spawns: ResMut<LastSpawns>,
     b: Res<GameBoard>,
@@ -68,7 +67,7 @@ pub(crate) fn spawn_rolling_enemy(
     if b.has_enemy[0] {
         return;
     }
-    let since_startup = time.seconds_since_startup as f32;
+    let since_startup = TIMESTEP * player.step as f32;
     if since_startup - last_spawns.rolling_enemy
         > (GAMESETTINGS.rolling_enemy_spawn_speed - player.spawn_rate_cut())
             .max(GAMESETTINGS.rolling_enemy_max_spawn_speed)
@@ -106,7 +105,6 @@ pub(crate) fn spawn_rolling_enemy(
 }
 
 pub(crate) fn spawn_rolling_enemy2(
-    time: ResMut<GameTime>,
     mut com: Commands,
     mut last_spawns: ResMut<LastSpawns>,
     b: Res<GameBoard>,
@@ -123,7 +121,7 @@ pub(crate) fn spawn_rolling_enemy2(
     if b.has_enemy[0] {
         return;
     }
-    let since_startup = time.seconds_since_startup as f32;
+    let since_startup = TIMESTEP * player.step as f32;
     if since_startup - last_spawns.rolling_enemy2
         > (GAMESETTINGS.rolling_enemy_2_spawn_speed - player.spawn_rate_cut())
             .max(GAMESETTINGS.rolling_enemy_2_max_spawn_speed)
@@ -161,7 +159,6 @@ pub(crate) fn spawn_rolling_enemy2(
 }
 
 pub(crate) fn spawn_flying_enemy(
-    time: ResMut<GameTime>,
     mut com: Commands,
     mut last_spawns: ResMut<LastSpawns>,
     b: Res<GameBoard>,
@@ -178,7 +175,7 @@ pub(crate) fn spawn_flying_enemy(
     if b.has_enemy[0] {
         return;
     }
-    let since_startup = time.seconds_since_startup as f32;
+    let since_startup = TIMESTEP * player.step as f32;
     if since_startup - last_spawns.flying_enemy
         > (GAMESETTINGS.flying_enemy_spawn_speed
             - player.spawn_rate_cut() * ((player.level - 20.0) * 0.25).clamp(1.0, 50.0))
@@ -279,7 +276,6 @@ pub(crate) fn update_enemy_paths(
 pub(crate) fn update_enemy_postgame_paths(
     b: Res<GameBoard>,
     mut enemies: Query<(&Transform, &mut EnemyPath)>,
-    time: ResMut<GameTime>,
     player: Res<PlayerState>,
 ) {
     if player.alive() {
@@ -287,7 +283,7 @@ pub(crate) fn update_enemy_postgame_paths(
     }
     let mut rng = rand::thread_rng();
     for (trans, mut enemy_path) in enemies.iter_mut() {
-        enemy_path.new_rand_loc_timer -= time.delta_seconds;
+        enemy_path.new_rand_loc_timer -= TIMESTEP;
         if enemy_path.new_rand_loc_timer < 0.0 {
             enemy_path.new_rand_loc_timer += rng.gen_range(4.0..6.0);
             let rnd = vec3(
@@ -337,7 +333,6 @@ pub(crate) fn debug_show_enemy_path(
 }
 
 pub(crate) fn move_enemy_along_path(
-    time: ResMut<GameTime>,
     b: Res<GameBoard>,
     mut enemies: Query<(&mut Transform, &mut EnemyPath, &Enemy)>,
 ) {
@@ -348,8 +343,7 @@ pub(crate) fn move_enemy_along_path(
                 let a = b.ls_to_ws_vec3(path.0[1]);
                 let next_pos = a;
                 if !b.has_enemy[b.ls_to_idx(b.ws_vec3_to_ls(next_pos))] {
-                    enemy_trans.translation +=
-                        (next_pos - p).normalize() * time.delta_seconds * enemy.speed;
+                    enemy_trans.translation += (next_pos - p).normalize() * TIMESTEP * enemy.speed;
                 }
                 enemy_trans.look_at(next_pos, Vec3::Y);
             }
@@ -392,14 +386,11 @@ pub(crate) fn check_enemy_at_dest(
     }
 }
 
-pub(crate) fn move_flying_enemy(
-    time: ResMut<GameTime>,
-    mut enemies: Query<(&mut Transform, &mut FlyingEnemy, &Enemy)>,
-) {
+pub(crate) fn move_flying_enemy(mut enemies: Query<(&mut Transform, &mut FlyingEnemy, &Enemy)>) {
     for (mut enemy_trans, fly_enemy, enemy) in enemies.iter_mut() {
         enemy_trans.look_at(fly_enemy.dest, Vec3::Y);
         let dir = (fly_enemy.dest - enemy_trans.translation).normalize();
-        enemy_trans.translation += dir * enemy.speed * time.delta_seconds;
+        enemy_trans.translation += dir * enemy.speed * TIMESTEP;
     }
 }
 
@@ -439,7 +430,6 @@ pub(crate) fn check_flying_enemy_at_dest(
 }
 
 pub(crate) fn update_flying_enemy_postgame_dest(
-    time: ResMut<GameTime>,
     mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
     player: Res<PlayerState>,
 ) {
@@ -448,7 +438,7 @@ pub(crate) fn update_flying_enemy_postgame_dest(
     }
     let mut rng = rand::thread_rng();
     for (_enemy_entity, mut _enemy_trans, mut fly_enemy, _enemy) in enemies.iter_mut() {
-        fly_enemy.new_rand_loc_timer -= time.delta_seconds;
+        fly_enemy.new_rand_loc_timer -= TIMESTEP;
         if fly_enemy.new_rand_loc_timer < 0.0 {
             fly_enemy.new_rand_loc_timer += rng.gen_range(1.0..5.0);
             let rnd = vec3(

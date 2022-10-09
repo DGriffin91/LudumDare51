@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
-use std::{f32::consts::TAU, time::Duration};
+use std::f32::consts::TAU;
 
 use assets::{AudioAssets, FontAssets, ModelAssets};
 use audio::GameAudioPlugin;
@@ -38,6 +38,7 @@ pub mod ui;
 fn main() {
     let mut app = App::new();
     app.add_loopless_state(GameState::AssetLoading)
+        .add_loopless_state(PausedState::Unpaused)
         .add_loading_state(
             LoadingState::new(GameState::AssetLoading)
                 .continue_to_state(GameState::RunLevel)
@@ -67,8 +68,6 @@ fn main() {
         canvas: Some("#bevy".to_string()),
         fit_canvas_to_parent: true,
     })
-    .insert_resource(GameTime::default())
-    .add_system(update_game_time)
     .insert_resource(AssetServerSettings {
         watch_for_changes: true,
         ..default()
@@ -214,46 +213,6 @@ fn destroy_base_disable_turrets(
     }
 }
 
-pub struct GameTime {
-    pub delta: Duration,
-    pub delta_seconds_f64: f64,
-    pub delta_seconds: f32,
-    pub seconds_since_startup: f64,
-    pub time_since_startup: Duration,
-    pub time_multiplier: f64,
-    pub pause: bool,
-}
-
-impl Default for GameTime {
-    fn default() -> GameTime {
-        GameTime {
-            delta: Duration::from_secs(0),
-            delta_seconds_f64: 0.0,
-            seconds_since_startup: 0.0,
-            time_since_startup: Duration::from_secs(0),
-            delta_seconds: 0.0,
-            time_multiplier: 1.0,
-            pause: false,
-        }
-    }
-}
-
-fn update_game_time(time: ResMut<Time>, mut gametime: ResMut<GameTime>) {
-    if gametime.pause {
-        let delta = Duration::from_secs_f64(0.0);
-        gametime.delta = delta;
-        gametime.delta_seconds_f64 = 0.0;
-        gametime.delta_seconds = 0.0;
-    } else {
-        let delta = Duration::from_secs_f64(time.delta_seconds_f64() * gametime.time_multiplier);
-        gametime.delta = delta;
-        gametime.delta_seconds_f64 = time.delta_seconds_f64() * gametime.time_multiplier;
-        gametime.delta_seconds = time.delta_seconds() * gametime.time_multiplier as f32;
-        gametime.seconds_since_startup += time.delta_seconds_f64() * gametime.time_multiplier;
-        gametime.time_since_startup += delta;
-    }
-}
-
 #[derive(Deref, DerefMut, Default)]
 pub struct RestartGame(bool);
 
@@ -268,7 +227,6 @@ fn restart_game(
     enemies: Query<Entity, With<Enemy>>,
     towers: Query<Entity, With<Turret>>,
     projectiles: Query<Entity, With<Projectile>>,
-    mut time: ResMut<GameTime>,
     mut last_spawns: ResMut<LastSpawns>,
 ) {
     if **restart_game {
@@ -289,11 +247,12 @@ fn restart_game(
             com.entity(e).despawn_recursive();
         }
         *b = GameBoard::default();
+
+        let old_time_multiplier = player.time_multiplier;
         *player = PlayerState::default();
+        player.time_multiplier = old_time_multiplier;
+
         spawn_main_base(&mut com, &model_assets, &b);
-        let old_time_multiplier = time.time_multiplier;
-        *time = GameTime::default();
-        time.time_multiplier = old_time_multiplier;
 
         *last_spawns = LastSpawns::default();
     }
@@ -328,6 +287,12 @@ pub enum GameState {
     RunLevel,
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub enum PausedState {
+    Unpaused,
+    Paused,
+}
+
 pub fn game_state_asset_loading(state: Res<CurrentState<GameState>>) -> ShouldRun {
     if *state == CurrentState(GameState::AssetLoading) {
         ShouldRun::Yes
@@ -336,8 +301,13 @@ pub fn game_state_asset_loading(state: Res<CurrentState<GameState>>) -> ShouldRu
     }
 }
 
-pub fn game_state_run_level(state: Res<CurrentState<GameState>>) -> ShouldRun {
-    if *state == CurrentState(GameState::RunLevel) {
+pub fn game_state_run_level_unpaused(
+    state: Res<CurrentState<GameState>>,
+    paused_state: Res<CurrentState<PausedState>>,
+) -> ShouldRun {
+    if *state == CurrentState(GameState::RunLevel)
+        && *paused_state == CurrentState(PausedState::Unpaused)
+    {
         ShouldRun::Yes
     } else {
         ShouldRun::No

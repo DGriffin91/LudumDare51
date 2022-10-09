@@ -1,13 +1,22 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy_mod_raycast::{DefaultRaycastingPlugin, RaycastSystem};
 use bevy_system_graph::SystemGraph;
 use iyes_loopless::prelude::*;
 
 use crate::{
-    action::*, enemies::*, game_state_run_level, player::*, restart_game, turrets::*, GameState,
+    action::*, enemies::*, game_state_run_level_unpaused, player::*, restart_game, turrets::*,
+    GameState,
 };
 
+pub const TIMESTEP_MILLI: u64 = 16;
+pub const TIMESTEP: f32 = 0.016;
+pub const TIMESTEP_SEC_F64: f64 = 0.016;
+
 pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
+    let mut fixed_update_stage = SystemStage::parallel();
+
     app.add_system_set(
         ConditionSet::new()
             .run_in_state(GameState::RunLevel)
@@ -23,16 +32,14 @@ pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
             update_raycast_with_cursor.before(RaycastSystem::BuildRays::<MyRaycastSet>),
         );
 
-    app.add_system_set(
-        ConditionSet::new()
-            .run_in_state(GameState::RunLevel)
+    fixed_update_stage.add_system_set(
+        Into::<SystemSet>::into(SystemGraph::new().root(set_level).graph())
+            .with_run_criteria(game_state_run_level_unpaused)
             .label("STEP PLAYER")
-            .before("STEP ENEMIES")
-            .with_system(set_level)
-            .into(),
+            .before("STEP ENEMIES"),
     );
 
-    app.add_system_set(
+    fixed_update_stage.add_system_set(
         Into::<SystemSet>::into(
             SystemGraph::new()
                 .root(destroy_enemies)
@@ -49,11 +56,11 @@ pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
                 .then(update_flying_enemy_postgame_dest)
                 .graph(),
         )
-        .with_run_criteria(game_state_run_level)
+        .with_run_criteria(game_state_run_level_unpaused)
         .label("STEP ENEMIES"),
     );
 
-    app.add_system_set(
+    fixed_update_stage.add_system_set(
         Into::<SystemSet>::into(
             SystemGraph::new()
                 .root(progress_projectiles)
@@ -65,13 +72,13 @@ pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
                 .then(blaster_point_at_enemy)
                 .graph(),
         )
-        .with_run_criteria(game_state_run_level)
+        .with_run_criteria(game_state_run_level_unpaused)
         .label("STEP TURRET")
         .after("STEP ENEMIES"),
     );
 
     app.insert_resource(ActionQueue::default());
-    app.add_system_set(
+    fixed_update_stage.add_system_set(
         ConditionSet::new()
             .run_in_state(GameState::RunLevel)
             .label("STEP ACTION")
@@ -80,12 +87,19 @@ pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
             .into(),
     );
 
-    app.add_system_set(
+    fixed_update_stage.add_system_set(
         ConditionSet::new()
             .run_in_state(GameState::RunLevel)
             .label("STEP RESTART GAME")
             .after("STEP TURRET")
             .with_system(restart_game)
             .into(),
+    );
+
+    app.add_stage_after(
+        CoreStage::Update,
+        "my_fixed_update",
+        FixedTimestepStage::new(Duration::from_millis(TIMESTEP_MILLI))
+            .with_stage(fixed_update_stage),
     );
 }

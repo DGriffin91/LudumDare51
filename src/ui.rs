@@ -11,7 +11,6 @@ use crate::audio::MUSIC_LEVEL_CHANGED;
 use crate::audio::SFX_LEVEL_CHANGED;
 
 use crate::GameState;
-use crate::GameTime;
 
 use crate::{player::PlayerState, turrets::Turret};
 
@@ -43,7 +42,6 @@ fn select_button(ui: &mut egui::Ui, text: &str, selected: bool) -> bool {
 }
 
 fn ui_sidebar(
-    time: Res<GameTime>,
     mut egui_context: ResMut<EguiContext>,
     mut player: ResMut<PlayerState>,
     mut windows: ResMut<Windows>,
@@ -132,7 +130,7 @@ fn ui_sidebar(
                     }
                     ui.label("");
 
-                    ui.label(&format!("GAME SPEED {:.2}", time.time_multiplier));
+                    ui.label(&format!("GAME SPEED {:.2}", player.time_multiplier));
                     ui.horizontal(|ui| {
                         if ui.button(" -- ").clicked() {
                             action_queue.push(Action::GameSpeedDec);

@@ -4,8 +4,8 @@ use bevy_mod_raycast::{Intersection, RayCastMethod, RayCastSource};
 use crate::{
     action::{Action, ActionQueue},
     board::GameBoard,
+    schedule::TIMESTEP,
     turrets::Turret,
-    GameTime,
 };
 
 pub struct GameSettings {
@@ -38,6 +38,8 @@ pub struct PlayerState {
     pub wave_upgrade: f32,
     pub level_time: f32,
     pub level: f32,
+    pub time_multiplier: f64,
+    pub step: u64,
 }
 
 pub const GAMESETTINGS: GameSettings = GameSettings {
@@ -106,16 +108,19 @@ impl Default for PlayerState {
             wave_upgrade: 1.0,
             level_time: 0.0,
             level: 0.0,
+            time_multiplier: 1.0,
+            step: 0,
         }
     }
 }
 
-pub fn set_level(time: ResMut<GameTime>, mut player: ResMut<PlayerState>) {
+pub fn set_level(mut player: ResMut<PlayerState>) {
     if !player.alive() {
         return;
     }
-    player.level_time += time.delta_seconds;
+    player.level_time += TIMESTEP;
     player.level = (player.level_time / 10.0).floor();
+    player.step += 1;
 }
 
 pub fn setup_player(

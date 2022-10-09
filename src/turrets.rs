@@ -12,9 +12,10 @@ use crate::audio::LASER_SOUND;
 use crate::audio::WAVE_SOUND;
 use crate::basic_light;
 use crate::player::PlayerState;
+use crate::schedule::TIMESTEP;
+use crate::schedule::TIMESTEP_MILLI;
 use crate::ui::Preferences;
 
-use crate::GameTime;
 use crate::{
     assets::ModelAssets,
     enemies::{Enemy, Health},
@@ -224,7 +225,7 @@ pub fn reset_turret_gfx(
 
 pub fn turret_fire(
     mut com: Commands,
-    time: ResMut<GameTime>,
+
     mut turrets: Query<
         (
             Entity,
@@ -264,7 +265,7 @@ pub fn turret_fire(
     }
 
     for (turret_entity, turret_trans, damage, range, mut cooldown, turret) in turrets.iter_mut() {
-        cooldown.tick(time.delta);
+        cooldown.tick(Duration::from_millis(TIMESTEP_MILLI));
 
         let mut closest = None;
         let mut closest_dist = INFINITY;
@@ -326,7 +327,7 @@ pub fn turret_fire(
                         if let Ok((_entity, enemy_trans, mut health)) = enemies.get_mut(entity) {
                             if closest_dist < **range {
                                 //cooldown.reset(); Don't ever reset continuous
-                                health.0 -= damage.0 * time.delta_seconds * player.laser_upgrade;
+                                health.0 -= damage.0 * TIMESTEP * player.laser_upgrade;
                                 for (mut vis, laser) in diamond_lasers.iter_mut() {
                                     if laser.top_parent == turret_entity {
                                         vis.is_visible = true;
@@ -440,7 +441,6 @@ pub fn blaster_point_at_enemy(
 }
 
 pub fn progress_projectiles(
-    time: ResMut<GameTime>,
     mut com: Commands,
     mut projectiles: Query<(Entity, &mut Transform, &mut Projectile), Without<Enemy>>,
     mut enemies: Query<(&Transform, &mut Health), With<Enemy>>,
@@ -486,7 +486,7 @@ pub fn progress_projectiles(
             }
         }
         if projectile.hit {
-            projectile.hit_despawn_countdown -= time.delta_seconds;
+            projectile.hit_despawn_countdown -= TIMESTEP;
         }
         if projectile.hit_despawn_countdown < 0.0 {
             com.entity(proj_entity).despawn_recursive();
@@ -495,12 +495,11 @@ pub fn progress_projectiles(
 }
 
 pub fn progress_explosions(
-    time: ResMut<GameTime>,
     mut com: Commands,
     mut explosions: Query<(Entity, &mut Transform, &mut DiscExplosion)>,
 ) {
     for (entity, mut trans, mut explosion) in explosions.iter_mut() {
-        explosion.progress += time.delta_seconds * explosion.speed;
+        explosion.progress += TIMESTEP * explosion.speed;
         if explosion.progress >= 1.0 {
             com.entity(entity).despawn_recursive();
         } else {
@@ -510,7 +509,6 @@ pub fn progress_explosions(
 }
 
 pub fn bobble_shockwave_spheres(
-    time: ResMut<GameTime>,
     mut shockwave_spheres: Query<(&mut Transform, &mut ShockwaveSphere)>,
     caps: Query<&Cap>,
 ) {
@@ -527,14 +525,14 @@ pub fn bobble_shockwave_spheres(
         if disable_bobble {
             sh.phase = 0.0;
         } else {
-            sh.phase += time.delta_seconds;
+            sh.phase += TIMESTEP;
         }
         trans.translation = Vec3::Y * 0.7 + Vec3::Y * 0.2 * (sh.phase * 2.0).sin() as f32;
     }
 }
 
-pub fn position_caps(time: ResMut<GameTime>, mut caps: Query<(&mut Transform, &mut Cap)>) {
-    let delta_sec = time.delta_seconds;
+pub fn position_caps(mut caps: Query<(&mut Transform, &mut Cap)>) {
+    let delta_sec = TIMESTEP;
     for (mut trans, mut cap) in caps.iter_mut() {
         cap.progress = (cap.progress - delta_sec * 2.0).max(0.0);
         trans.translation = cap.direction * cap.progress;

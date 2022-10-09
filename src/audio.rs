@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy_kira_audio::{AudioControl, AudioInstance, AudioPlugin, AudioSettings, AudioTween};
 use rand::seq::SliceRandom;
 
-use crate::{assets::AudioAssets, ui::Preferences, GameState};
+use crate::{assets::AudioAssets, ui::Preferences, GameRng, GameState};
 
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
@@ -78,6 +78,7 @@ fn run_audio(
     mut audio_events_res: ResMut<AudioEvents>,
     music_h: Res<MusicAudioHandle>,
     pref: Res<Preferences>,
+    mut rng: ResMut<GameRng>,
 ) {
     let sfx_level = SFX_OFFSET * pref.sfx;
     let events = **audio_events_res;
@@ -93,7 +94,7 @@ fn run_audio(
                         audio_assets.laser3.clone(),
                         audio_assets.laser4.clone(),
                     ]
-                    .choose(&mut rand::thread_rng())
+                    .choose(&mut rng.0)
                     .unwrap()
                     .clone(),
                 )
@@ -108,7 +109,7 @@ fn run_audio(
                         audio_assets.wave3.clone(),
                         audio_assets.wave4.clone(),
                     ]
-                    .choose(&mut rand::thread_rng())
+                    .choose(&mut rng.0)
                     .unwrap()
                     .clone(),
                 )
@@ -125,7 +126,7 @@ fn run_audio(
                         audio_assets.exp5.clone(),
                         audio_assets.exp6.clone(),
                     ]
-                    .choose(&mut rand::thread_rng())
+                    .choose(&mut rng.0)
                     .unwrap()
                     .clone(),
                 )

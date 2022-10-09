@@ -24,6 +24,7 @@ use enemies::{EnemiesPlugin, Enemy, LastSpawns};
 use iyes_loopless::prelude::*;
 use player::{MyRaycastSet, PlayerState};
 
+use rand_pcg::Pcg32;
 use turrets::{Disabled, Projectile, Turret};
 use ui::GameUI;
 pub mod action;
@@ -76,6 +77,7 @@ fn main() {
     .insert_resource(ClearColor(Color::BLACK))
     .insert_resource(GameBoard::default())
     .insert_resource(RestartGame::default())
+    .insert_resource(GameRng::default())
     .add_plugins(DefaultPlugins)
     .add_plugin(HookPlugin);
 
@@ -99,6 +101,16 @@ fn main() {
 
     app.run();
 }
+
+#[derive(Deref, DerefMut)]
+pub struct GameRng(pub Pcg32);
+
+impl Default for GameRng {
+    fn default() -> Self {
+        GameRng(Pcg32::new(0xcafef00dd15ea5e5, 0xa02bdbf7bb3c0a7))
+    }
+}
+
 #[derive(Component)]
 pub struct Board;
 

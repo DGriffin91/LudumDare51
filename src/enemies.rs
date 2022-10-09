@@ -1,6 +1,7 @@
 use bevy::{math::*, prelude::*};
 
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
+use rand::Rng;
 
 use crate::{
     assets::ModelAssets,
@@ -11,6 +12,7 @@ use crate::{
     schedule::TIMESTEP,
     turrets::DiscExplosion,
     ui::Preferences,
+    GameRng,
 };
 
 pub struct EnemiesPlugin;
@@ -19,8 +21,6 @@ impl Plugin for EnemiesPlugin {
         app.insert_resource(LastSpawns::default());
     }
 }
-
-use rand::Rng;
 
 #[derive(Component, Default)]
 pub struct EnemyPath {
@@ -165,6 +165,7 @@ pub(crate) fn spawn_flying_enemy(
     model_assets: Res<ModelAssets>,
     player: Res<PlayerState>,
     pref: Res<Preferences>,
+    mut rng: ResMut<GameRng>,
 ) {
     if !player.alive() {
         return;
@@ -204,8 +205,6 @@ pub(crate) fn spawn_flying_enemy(
             0.2,
             vec3(0.0, 0.3, -0.2),
         );
-
-        let mut rng = rand::thread_rng();
 
         // Random pos off screen
         let rnd_offset = vec3(
@@ -277,11 +276,12 @@ pub(crate) fn update_enemy_postgame_paths(
     b: Res<GameBoard>,
     mut enemies: Query<(&Transform, &mut EnemyPath)>,
     player: Res<PlayerState>,
+    mut rng: ResMut<GameRng>,
 ) {
     if player.alive() {
         return;
     }
-    let mut rng = rand::thread_rng();
+
     for (trans, mut enemy_path) in enemies.iter_mut() {
         enemy_path.new_rand_loc_timer -= TIMESTEP;
         if enemy_path.new_rand_loc_timer < 0.0 {
@@ -432,11 +432,12 @@ pub(crate) fn check_flying_enemy_at_dest(
 pub(crate) fn update_flying_enemy_postgame_dest(
     mut enemies: Query<(Entity, &mut Transform, &mut FlyingEnemy, &Enemy)>,
     player: Res<PlayerState>,
+    mut rng: ResMut<GameRng>,
 ) {
     if player.alive() {
         return;
     }
-    let mut rng = rand::thread_rng();
+
     for (_enemy_entity, mut _enemy_trans, mut fly_enemy, _enemy) in enemies.iter_mut() {
         fly_enemy.new_rand_loc_timer -= TIMESTEP;
         if fly_enemy.new_rand_loc_timer < 0.0 {

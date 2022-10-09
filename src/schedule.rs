@@ -78,6 +78,7 @@ pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
     );
 
     app.insert_resource(ActionQueue::default());
+    app.insert_resource(GameRecorder::default());
     fixed_update_stage.add_system_set(
         ConditionSet::new()
             .run_in_state(GameState::RunLevel)

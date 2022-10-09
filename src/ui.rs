@@ -3,9 +3,14 @@ use bevy::prelude::*;
 use bevy_egui::egui::Color32;
 use bevy_egui::{egui::FontDefinitions, *};
 use iyes_loopless::prelude::ConditionSet;
+use lz4_flex::compress_prepend_size;
+use lz4_flex::decompress_size_prepended;
+use rkyv::Deserialize;
 
 use crate::action::Action;
 use crate::action::ActionQueue;
+use crate::action::ActionRecording;
+use crate::action::GameRecorder;
 use crate::audio::AudioEvents;
 use crate::audio::MUSIC_LEVEL_CHANGED;
 use crate::audio::SFX_LEVEL_CHANGED;
@@ -48,7 +53,16 @@ fn ui_sidebar(
     mut pref: ResMut<Preferences>,
     mut audio_events: ResMut<AudioEvents>,
     mut action_queue: ResMut<ActionQueue>,
+    mut game_recorder: ResMut<GameRecorder>,
+    mut rec_string: Local<String>,
+    mut player_last_dead: Local<bool>,
 ) {
+    let mut player_died_this_frame = false;
+    if !*player_last_dead && !player.alive() {
+        player_died_this_frame = true;
+        *player_last_dead = true;
+    }
+
     let window = windows.get_primary_mut().unwrap();
     let my_frame = egui::containers::Frame {
         fill: Color32::from_rgba_unmultiplied(0, 0, 0, 64),
@@ -178,6 +192,36 @@ fn ui_sidebar(
                 ui.label("");
                 if ui.button("RESTART GAME").clicked() {
                     action_queue.push(Action::RestartGame);
+                    game_recorder.disable_rec = false;
+                    game_recorder.play = false;
+                    game_recorder.actions = ActionRecording::default();
+                }
+                if select_button(ui, "REPLAY", game_recorder.play) {
+                    action_queue.push(Action::RestartGame);
+                    game_recorder.play = true;
+                    game_recorder.disable_rec = true;
+                    game_recorder.play_head = 0;
+                }
+                if ui.text_edit_singleline(&mut *rec_string).changed() {
+                    if let Ok(compressed) = base64::decode(rec_string.trim()) {
+                        if let Ok(bytes) = decompress_size_prepended(&compressed) {
+                            if let Ok(archived) =
+                                rkyv::check_archived_root::<ActionRecording>(&bytes)
+                            {
+                                if let Ok(deserialized) =
+                                    archived.deserialize(&mut rkyv::Infallible)
+                                {
+                                    game_recorder.actions = deserialized;
+                                }
+                            }
+                        }
+                    }
+                }
+                if player_died_this_frame || ui.button("GET REPLAY STRING").clicked() {
+                    let bytes = rkyv::to_bytes::<_, 1024>(&game_recorder.actions).unwrap();
+                    let compressed = compress_prepend_size(&bytes);
+                    let base64_bytes = base64::encode(compressed);
+                    *rec_string = base64_bytes;
                 }
             });
         });

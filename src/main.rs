@@ -1,5 +1,4 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
-#![feature(trivial_bounds)]
 
 use std::f32::consts::TAU;
 

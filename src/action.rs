@@ -27,18 +27,13 @@ pub fn process_actions(
     mut game_recorder: ResMut<GameRecorder>,
 ) {
     if game_recorder.play {
-        loop {
-            if let Some((step, rec_actions)) = game_recorder.actions.0.get(game_recorder.play_head)
-            {
-                if *step as u64 == player.step {
-                    action_queue.0.push(Action::from_bytes(*rec_actions))
-                } else {
-                    break;
-                }
-                game_recorder.play_head += 1;
+        while let Some((step, rec_actions)) = game_recorder.actions.0.get(game_recorder.play_head) {
+            if *step as u64 == player.step {
+                action_queue.0.push(Action::from_bytes(*rec_actions))
             } else {
                 break;
             }
+            game_recorder.play_head += 1;
         }
     }
 
@@ -163,13 +158,15 @@ pub fn process_actions(
     }
 
     if !game_recorder.disable_rec {
-        action_queue.0.retain_mut(|action| match action {
-            Action::Empty => false,
-            Action::GameSpeedDec => false,
-            Action::GameSpeedInc => false,
-            Action::GamePause => false,
-            Action::RestartGame => false,
-            _ => true,
+        action_queue.0.retain_mut(|action| {
+            !matches!(
+                action,
+                Action::Empty
+                    | Action::GameSpeedDec
+                    | Action::GameSpeedInc
+                    | Action::GamePause
+                    | Action::RestartGame
+            )
         });
 
         for action in action_queue.iter() {

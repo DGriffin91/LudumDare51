@@ -1,6 +1,8 @@
 use std::time::Duration;
 
 use bevy::{math::*, prelude::*};
+
+use ggrs::InputStatus;
 use iyes_loopless::{
     prelude::FixedTimestepInfo,
     state::{CurrentState, NextState},
@@ -10,9 +12,26 @@ use rkyv::{Archive, Deserialize, Serialize};
 use bytecheck::CheckBytes;
 
 use crate::{
-    assets::ModelAssets, board::GameBoard, player::PlayerState, schedule::TIMESTEP_MILLI,
-    turrets::Turret, ui::Preferences, PausedState, RestartGame,
+    assets::ModelAssets, board::GameBoard, net::BoxInput, player::PlayerState,
+    schedule::TIMESTEP_MILLI, turrets::Turret, ui::Preferences, PausedState, RestartGame,
 };
+
+pub fn playback_actions(
+    player: Res<PlayerState>,
+    mut game_recorder: ResMut<GameRecorder>,
+    mut action_queue: ResMut<ActionQueue>,
+) {
+    if game_recorder.play {
+        while let Some((step, rec_actions)) = game_recorder.actions.0.get(game_recorder.play_head) {
+            if *step as u64 == player.step {
+                action_queue.tx.push(Action::from_bytes(*rec_actions))
+            } else {
+                break;
+            }
+            game_recorder.play_head += 1;
+        }
+    }
+}
 
 pub fn process_actions(
     mut com: Commands,
@@ -22,22 +41,24 @@ pub fn process_actions(
     model_assets: Res<ModelAssets>,
     mut b: ResMut<GameBoard>,
     pref: Res<Preferences>,
-    mut time_step_info: ResMut<FixedTimestepInfo>,
+    mut time_step_info: Option<ResMut<FixedTimestepInfo>>,
     paused_state: Res<CurrentState<PausedState>>,
     mut game_recorder: ResMut<GameRecorder>,
+    net_rx: Option<Res<Vec<(BoxInput, InputStatus)>>>,
 ) {
-    if game_recorder.play {
-        while let Some((step, rec_actions)) = game_recorder.actions.0.get(game_recorder.play_head) {
-            if *step as u64 == player.step {
-                action_queue.0.push(Action::from_bytes(*rec_actions))
-            } else {
-                break;
-            }
-            game_recorder.play_head += 1;
+    if let Some(net_rx) = net_rx {
+        //for net_player in net_players.iter_mut() {
+        //let input = net_rx[net_player.handle as usize].0;
+        for (input, _status) in net_rx.iter() {
+            action_queue.rx.push(Action::from_bytes(input.data));
         }
+        //}
+    } else {
+        // this is single player, just pass actions from rx to tx
+        action_queue.rx = action_queue.tx.clone();
     }
 
-    #[allow(unused_assignments)]
+    #[allow(unused_assignments, unused_mut)]
     let mut debug_build = false;
 
     #[cfg(debug_assertions)]
@@ -45,7 +66,7 @@ pub fn process_actions(
         debug_build = true;
     }
 
-    for action in action_queue.0.iter() {
+    for action in action_queue.rx.iter() {
         let mut place_turret = None;
         match action {
             Action::Empty => continue,
@@ -88,14 +109,20 @@ pub fn process_actions(
                 }
             }
             Action::GameSpeedDec => {
-                player.time_multiplier = (player.time_multiplier - 0.1).max(0.1);
-                time_step_info.step =
-                    Duration::from_millis((TIMESTEP_MILLI as f64 / player.time_multiplier) as u64)
+                if let Some(ref mut time_step_info) = time_step_info {
+                    player.time_multiplier = (player.time_multiplier - 0.1).max(0.1);
+                    time_step_info.step = Duration::from_millis(
+                        (TIMESTEP_MILLI as f64 / player.time_multiplier) as u64,
+                    )
+                }
             }
             Action::GameSpeedInc => {
-                player.time_multiplier = (player.time_multiplier + 0.1).min(10.0);
-                time_step_info.step =
-                    Duration::from_millis((TIMESTEP_MILLI as f64 / player.time_multiplier) as u64)
+                if let Some(ref mut time_step_info) = time_step_info {
+                    player.time_multiplier = (player.time_multiplier + 0.1).min(10.0);
+                    time_step_info.step = Duration::from_millis(
+                        (TIMESTEP_MILLI as f64 / player.time_multiplier) as u64,
+                    )
+                }
             }
             Action::GamePause => {
                 if *paused_state == CurrentState(PausedState::Paused) {
@@ -158,7 +185,7 @@ pub fn process_actions(
     }
 
     if !game_recorder.disable_rec {
-        action_queue.0.retain_mut(|action| {
+        action_queue.rx.retain_mut(|action| {
             !matches!(
                 action,
                 Action::Empty
@@ -169,7 +196,7 @@ pub fn process_actions(
             )
         });
 
-        for action in action_queue.iter() {
+        for action in action_queue.rx.iter() {
             game_recorder
                 .actions
                 .0
@@ -177,7 +204,8 @@ pub fn process_actions(
         }
     }
 
-    action_queue.0 = Vec::new(); // Clear action queue
+    action_queue.tx = Vec::new(); // Clear action queue
+    action_queue.rx = Vec::new(); // Clear action queue
 }
 
 #[derive(Archive, Deserialize, Serialize, Clone, Eq, PartialEq, Default, Debug)]
@@ -193,8 +221,11 @@ pub struct GameRecorder {
     pub play_head: usize,
 }
 
-#[derive(Deref, DerefMut, Default)]
-pub struct ActionQueue(pub Vec<Action>);
+#[derive(Default)]
+pub struct ActionQueue {
+    pub tx: Vec<Action>,
+    pub rx: Vec<Action>,
+}
 
 #[derive(Archive, Deserialize, Serialize, Clone, Copy, Eq, PartialEq, Debug)]
 #[archive_attr(derive(CheckBytes))]

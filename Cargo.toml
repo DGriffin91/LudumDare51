@@ -25,6 +25,11 @@ bytecheck = "0.6"
 lz4_flex = "0.9"
 base64 = "0.13"
 
+ggrs = { version= "0.9", features=["sync-send"]}
+bevy_ggrs = "0.10"
+structopt = "0.3"
+bytemuck = { version = "1.7", features=["derive"]}
+
 # Enable only a small amount of optimization in debug mode
 [profile.dev]
 opt-level = 1
@@ -32,3 +37,6 @@ opt-level = 1
 # Enable high optimizations for dependencies (incl. Bevy), but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
+
+# cargo run -- --local-port 7001 --players localhost 127.0.0.1:7000 
+# cargo run -- --local-port 7000 --players localhost 127.0.0.1:7001

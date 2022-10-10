@@ -21,7 +21,7 @@ use crate::{
     enemies::{Enemy, Health},
 };
 
-#[derive(Clone, Copy, Component, PartialEq, Eq)]
+#[derive(Clone, Copy, Component, PartialEq, Eq, Reflect)]
 pub enum Turret {
     Blaster,
     Laser,

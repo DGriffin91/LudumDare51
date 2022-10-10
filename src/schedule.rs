@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 use bevy_mod_raycast::{DefaultRaycastingPlugin, RaycastSystem};
 use bevy_system_graph::SystemGraph;
@@ -14,13 +12,14 @@ pub const TIMESTEP_MILLI: u64 = 16;
 pub const TIMESTEP: f32 = 0.016;
 pub const TIMESTEP_SEC_F64: f64 = 0.016;
 
-pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
+pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) -> SystemStage {
     let mut fixed_update_stage = SystemStage::parallel();
 
     app.add_system_set(
         ConditionSet::new()
             .run_in_state(GameState::RunLevel)
             .with_system(mouse_interact)
+            .with_system(playback_actions)
             .into(),
     );
 
@@ -97,10 +96,5 @@ pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
             .into(),
     );
 
-    app.add_stage_after(
-        CoreStage::Update,
-        "my_fixed_update",
-        FixedTimestepStage::new(Duration::from_millis(TIMESTEP_MILLI))
-            .with_stage(fixed_update_stage),
-    );
+    fixed_update_stage
 }

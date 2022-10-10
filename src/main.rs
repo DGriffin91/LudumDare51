@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
-use std::f32::consts::TAU;
+use std::{f32::consts::TAU, time::Duration};
 
 use assets::{AudioAssets, FontAssets, ModelAssets};
 use audio::GameAudioPlugin;
@@ -21,9 +21,13 @@ use board::GameBoard;
 
 use enemies::{EnemiesPlugin, Enemy, LastSpawns};
 use iyes_loopless::prelude::*;
+use net::Opt;
 use player::{MyRaycastSet, PlayerState};
 
 use rand_pcg::Pcg32;
+
+use schedule::TIMESTEP_MILLI;
+use structopt::StructOpt;
 use turrets::{Disabled, Projectile, Turret};
 use ui::GameUI;
 pub mod action;
@@ -31,6 +35,7 @@ pub mod assets;
 pub mod audio;
 pub mod board;
 pub mod enemies;
+pub mod net;
 pub mod player;
 pub mod schedule;
 pub mod turrets;
@@ -38,11 +43,18 @@ pub mod ui;
 
 fn main() {
     let mut app = App::new();
+
+    let after_loading = if Opt::from_args().players.len() < 1 {
+        GameState::RunLevel
+    } else {
+        GameState::Connecting
+    };
+
     app.add_loopless_state(GameState::AssetLoading)
         .add_loopless_state(PausedState::Unpaused)
         .add_loading_state(
             LoadingState::new(GameState::AssetLoading)
-                .continue_to_state(GameState::RunLevel)
+                .continue_to_state(after_loading)
                 .with_collection::<FontAssets>()
                 .with_collection::<ModelAssets>()
                 .with_collection::<AudioAssets>(),
@@ -83,7 +95,23 @@ fn main() {
     app.add_plugin(GameUI)
         .add_plugin(EnemiesPlugin)
         .add_plugin(GameAudioPlugin);
-    schedule::setup_schedule(&mut app);
+
+    let fixed_update_stage = schedule::setup_schedule(&mut app);
+
+    if after_loading == GameState::Connecting {
+        println!("MULTIPLAYER");
+        // Multi Player
+        net::setup_ggrs(&mut app, fixed_update_stage);
+    } else {
+        println!("SINGLE PLAYER");
+        // Single Player
+        app.add_stage_after(
+            CoreStage::Update,
+            "my_fixed_update",
+            FixedTimestepStage::new(Duration::from_millis(TIMESTEP_MILLI))
+                .with_stage(fixed_update_stage),
+        );
+    }
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -293,9 +321,10 @@ pub fn basic_light(
     });
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum GameState {
     AssetLoading,
+    Connecting,
     RunLevel,
 }
 

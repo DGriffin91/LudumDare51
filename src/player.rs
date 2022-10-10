@@ -173,17 +173,25 @@ pub fn mouse_interact(
         let idx = b.ls_to_idx(b.ws_vec3_to_ls(cursor_pos));
         let ls_p = b.idx_to_ls(idx);
         if player.sell_mode {
-            action_queue.push(Action::SellTurret(ls_p.x as u8, ls_p.y as u8));
+            action_queue
+                .tx
+                .push(Action::SellTurret(ls_p.x as u8, ls_p.y as u8));
         } else if let Some(selected_turret) = player.turret_to_place {
             match selected_turret {
                 Turret::Blaster => {
-                    action_queue.push(Action::BlasterPlace(ls_p.x as u8, ls_p.y as u8));
+                    action_queue
+                        .tx
+                        .push(Action::BlasterPlace(ls_p.x as u8, ls_p.y as u8));
                 }
                 Turret::Laser => {
-                    action_queue.push(Action::LaserPlace(ls_p.x as u8, ls_p.y as u8));
+                    action_queue
+                        .tx
+                        .push(Action::LaserPlace(ls_p.x as u8, ls_p.y as u8));
                 }
                 Turret::Wave => {
-                    action_queue.push(Action::WavePlace(ls_p.x as u8, ls_p.y as u8));
+                    action_queue
+                        .tx
+                        .push(Action::WavePlace(ls_p.x as u8, ls_p.y as u8));
                 }
             };
         }

@@ -86,13 +86,13 @@ fn ui_sidebar(
                 #[cfg(debug_assertions)]
                 {
                     if ui.button("CREDITS").clicked() {
-                        action_queue.push(Action::CheatCredits);
+                        action_queue.tx.push(Action::CheatCredits);
                     }
                     if ui.button("HEALTH").clicked() {
-                        action_queue.push(Action::CheatHealth);
+                        action_queue.tx.push(Action::CheatHealth);
                     }
                     if ui.button("NEXT LEVEL").clicked() {
-                        action_queue.push(Action::CheatLevel);
+                        action_queue.tx.push(Action::CheatLevel);
                     }
                 }
                 let v = 1.0 - (player.level_time * 0.1 - player.level).fract();
@@ -132,28 +132,28 @@ fn ui_sidebar(
                     ui.label("UPGRADES +5%");
                     let cost = player.blaster_upgrade_cost();
                     if ui.button(&format!("BLASTER {:8}", cost)).clicked() {
-                        action_queue.push(Action::BlasterUpgrade);
+                        action_queue.tx.push(Action::BlasterUpgrade);
                     }
                     let cost = player.wave_upgrade_cost();
                     if ui.button(&format!("WAVE    {:8}", cost)).clicked() {
-                        action_queue.push(Action::WaveUpgrade);
+                        action_queue.tx.push(Action::WaveUpgrade);
                     }
                     let cost = player.laser_upgrade_cost();
                     if ui.button(&format!("LASERS  {:8}", cost)).clicked() {
-                        action_queue.push(Action::LaserUpgrade);
+                        action_queue.tx.push(Action::LaserUpgrade);
                     }
                     ui.label("");
 
                     ui.label(&format!("GAME SPEED {:.2}", player.time_multiplier));
                     ui.horizontal(|ui| {
                         if ui.button(" -- ").clicked() {
-                            action_queue.push(Action::GameSpeedDec);
+                            action_queue.tx.push(Action::GameSpeedDec);
                         }
                         if ui.button(" ++ ").clicked() {
-                            action_queue.push(Action::GameSpeedInc);
+                            action_queue.tx.push(Action::GameSpeedInc);
                         }
                         if ui.button("PAUSE").clicked() {
-                            action_queue.push(Action::GamePause);
+                            action_queue.tx.push(Action::GamePause);
                         }
                     });
                 }
@@ -191,13 +191,13 @@ fn ui_sidebar(
                 });
                 ui.label("");
                 if ui.button("RESTART GAME").clicked() {
-                    action_queue.push(Action::RestartGame);
+                    action_queue.tx.push(Action::RestartGame);
                     game_recorder.disable_rec = false;
                     game_recorder.play = false;
                     game_recorder.actions = ActionRecording::default();
                 }
                 if select_button(ui, "REPLAY", game_recorder.play) {
-                    action_queue.push(Action::RestartGame);
+                    action_queue.tx.push(Action::RestartGame);
                     game_recorder.play = true;
                     game_recorder.disable_rec = true;
                     game_recorder.play_head = 0;

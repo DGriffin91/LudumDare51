@@ -57,12 +57,15 @@ impl Turret {
         model_assets: &ModelAssets,
         pref: &Preferences,
     ) -> (Turret, bevy::prelude::Entity) {
-        let mut ecmds = com.spawn();
+        let mut ecmds = com.spawn_empty();
         let entity_id = ecmds.id();
 
         ecmds
             .insert(AttackDamage(0.1))
-            .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.9), true)))
+            .insert(Cooldown(Timer::new(
+                Duration::from_secs_f32(0.9),
+                TimerMode::Repeating,
+            )))
             .insert(Range(4.0))
             .insert(Turret::Wave);
         basic_light(
@@ -74,7 +77,7 @@ impl Turret {
             vec3(0.0, 0.6, 0.0),
         );
 
-        ecmds.insert_bundle(HookedSceneBundle {
+        ecmds.insert(HookedSceneBundle {
             scene: SceneBundle {
                 scene: model_assets.wave_turret.clone(),
                 transform: Transform::from_translation(trans),
@@ -115,11 +118,14 @@ impl Turret {
         model_assets: &ModelAssets,
         pref: &Preferences,
     ) -> (Turret, bevy::prelude::Entity) {
-        let mut ecmds = com.spawn();
+        let mut ecmds = com.spawn_empty();
         let entity_id = ecmds.id();
         ecmds
             .insert(AttackDamage(0.02))
-            .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.5), true)))
+            .insert(Cooldown(Timer::new(
+                Duration::from_secs_f32(0.5),
+                TimerMode::Repeating,
+            )))
             .insert(Range(10.0))
             .insert(Turret::Blaster);
         basic_light(
@@ -131,7 +137,7 @@ impl Turret {
             vec3(0.0, 1.0, 0.0),
         );
 
-        ecmds.insert_bundle(HookedSceneBundle {
+        ecmds.insert(HookedSceneBundle {
             scene: SceneBundle {
                 scene: model_assets.blaster_turret.clone(),
                 transform: Transform::from_translation(trans),
@@ -157,17 +163,20 @@ impl Turret {
         model_assets: &ModelAssets,
         pref: &Preferences,
     ) -> (Turret, bevy::prelude::Entity) {
-        let mut ecmds = com.spawn();
+        let mut ecmds = com.spawn_empty();
         let entity_id = ecmds.id();
         ecmds
             .insert(AttackDamage(0.35))
-            .insert(Cooldown(Timer::new(Duration::from_secs_f32(0.1), false)))
+            .insert(Cooldown(Timer::new(
+                Duration::from_secs_f32(0.1),
+                TimerMode::Once,
+            )))
             .insert(Range(16.0))
             .insert(Turret::Laser);
 
         ecmds.add_children(|parent| {
             parent
-                .spawn_bundle(PointLightBundle {
+                .spawn(PointLightBundle {
                     point_light: PointLight {
                         color: Color::hex("68FF72").unwrap(),
                         intensity: 110.0,
@@ -181,7 +190,7 @@ impl Turret {
                 .insert(ContinuousLaserLight);
         });
 
-        ecmds.insert_bundle(HookedSceneBundle {
+        ecmds.insert(HookedSceneBundle {
             scene: SceneBundle {
                 scene: model_assets.laser_turret.clone(),
                 transform: Transform::from_translation(trans),
@@ -289,9 +298,9 @@ pub fn turret_fire(
                                 let turret_head_trans = turret_trans.translation + Vec3::Y * 1.0;
                                 let fire_dir =
                                     (enemy_trans.translation - turret_head_trans).normalize();
-                                let mut ecmds = com.spawn();
+                                let mut ecmds = com.spawn_empty();
 
-                                ecmds.insert_bundle(SceneBundle {
+                                ecmds.insert(SceneBundle {
                                     scene: model_assets.projectile_laser_blast.clone(),
                                     transform: Transform::from_translation(turret_head_trans)
                                         .looking_at(enemy_trans.translation, Vec3::Y),
@@ -366,7 +375,7 @@ pub fn turret_fire(
                             }
                             cooldown.reset();
                             health.0 -= damage.0 * (1.0 / dist.max(1.0)) * player.wave_upgrade;
-                            let mut ecmds = com.spawn_bundle(SceneBundle {
+                            let mut ecmds = com.spawn(SceneBundle {
                                 scene: model_assets.disc.clone(),
                                 transform: Transform::from_translation(
                                     turret_trans.translation + Vec3::Y * 0.5,
@@ -459,7 +468,7 @@ pub fn progress_projectiles(
                 {
                     **health -= projectile.damage * player.wave_upgrade;
                     if **health < 0.0 {
-                        let mut ecmds = com.spawn_bundle(SceneBundle {
+                        let mut ecmds = com.spawn(SceneBundle {
                             scene: model_assets.disc.clone(),
                             transform: Transform::from_translation(
                                 enemy_trans.translation + Vec3::Y * 0.5,
@@ -527,7 +536,7 @@ pub fn bobble_shockwave_spheres(
         } else {
             sh.phase += TIMESTEP;
         }
-        trans.translation = Vec3::Y * 0.7 + Vec3::Y * 0.2 * (sh.phase * 2.0).sin() as f32;
+        trans.translation = Vec3::Y * 0.7 + Vec3::Y * 0.2 * (sh.phase * 2.0).sin();
     }
 }
 

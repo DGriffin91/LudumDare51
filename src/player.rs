@@ -1,5 +1,5 @@
 use bevy::{math::*, prelude::*};
-use bevy_mod_raycast::{Intersection, RayCastMethod, RayCastSource};
+use bevy_mod_raycast::{Intersection, RaycastMethod, RaycastSource};
 
 use crate::{
     action::{Action, ActionQueue},
@@ -27,6 +27,7 @@ pub struct GameSettings {
     pub credits_for_kill: u64,
 }
 
+#[derive(Resource)]
 pub struct PlayerState {
     pub credits: u64,
     pub turret_to_place: Option<Turret>,
@@ -128,7 +129,7 @@ pub fn setup_player(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    com.spawn_bundle(PbrBundle {
+    com.spawn(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
         material: materials.add(StandardMaterial {
             base_color: Color::BLACK,
@@ -195,7 +196,7 @@ pub struct GameCursor;
 
 pub fn update_raycast_with_cursor(
     mut cursor: EventReader<CursorMoved>,
-    mut query: Query<&mut RayCastSource<MyRaycastSet>>,
+    mut query: Query<&mut RaycastSource<MyRaycastSet>>,
 ) {
     // Grab the most recent cursor event if it exists:
     let cursor_position = match cursor.iter().last() {
@@ -204,6 +205,6 @@ pub fn update_raycast_with_cursor(
     };
 
     for mut pick_source in &mut query {
-        pick_source.cast_method = RayCastMethod::Screenspace(cursor_position);
+        pick_source.cast_method = RaycastMethod::Screenspace(cursor_position);
     }
 }

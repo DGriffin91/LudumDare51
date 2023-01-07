@@ -5,7 +5,6 @@ use std::f32::consts::TAU;
 use assets::{AudioAssets, FontAssets, ModelAssets};
 use audio::GameAudioPlugin;
 use bevy::{
-    asset::AssetServerSettings,
     ecs::{schedule::ShouldRun, system::EntityCommands},
     math::*,
     prelude::*,
@@ -14,7 +13,7 @@ use bevy::{
 };
 use bevy_asset_loader::prelude::{LoadingState, LoadingStateAppExt};
 
-use bevy_mod_raycast::{RayCastMesh, RayCastSource};
+use bevy_mod_raycast::{RaycastMesh, RaycastSource};
 
 use bevy_scene_hook::{HookPlugin, HookedSceneBundle, SceneHook};
 use board::GameBoard;
@@ -48,37 +47,42 @@ fn main() {
                 .with_collection::<AudioAssets>(),
         );
 
-    app.insert_resource(WindowDescriptor {
-        title: "LD51".to_string(),
-        width: 1280.0,
-        height: 720.0,
-        position: WindowPosition::Automatic,
-        resize_constraints: WindowResizeConstraints {
-            min_width: 960.0,
-            min_height: 480.0,
-            ..Default::default()
-        },
-        scale_factor_override: Some(1.0), //Needed for some mobile devices, but disables scaling
-        present_mode: PresentMode::AutoVsync,
-        resizable: true,
-        decorations: true,
-        cursor_locked: false,
-        cursor_visible: true,
-        mode: WindowMode::Windowed,
-        transparent: false,
-        canvas: Some("#bevy".to_string()),
-        fit_canvas_to_parent: true,
-    })
-    .insert_resource(AssetServerSettings {
-        watch_for_changes: true,
-        ..default()
-    })
-    .insert_resource(ClearColor(Color::BLACK))
-    .insert_resource(GameBoard::default())
-    .insert_resource(RestartGame::default())
-    .insert_resource(GameRng::default())
-    .add_plugins(DefaultPlugins)
-    .add_plugin(HookPlugin);
+    app.insert_resource(ClearColor(Color::BLACK))
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        title: "LD51".to_string(),
+                        width: 1280.0,
+                        height: 720.0,
+                        position: WindowPosition::Automatic,
+                        resize_constraints: WindowResizeConstraints {
+                            min_width: 960.0,
+                            min_height: 480.0,
+                            ..Default::default()
+                        },
+                        scale_factor_override: Some(1.0), //Needed for some mobile devices, but disables scaling
+                        present_mode: PresentMode::AutoVsync,
+                        resizable: true,
+                        decorations: true,
+                        cursor_visible: true,
+                        mode: WindowMode::Windowed,
+                        transparent: false,
+                        canvas: Some("#bevy".to_string()),
+                        fit_canvas_to_parent: true,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .set(AssetPlugin {
+                    watch_for_changes: true,
+                    ..Default::default()
+                }),
+        )
+        .insert_resource(GameBoard::default())
+        .insert_resource(RestartGame::default())
+        .insert_resource(GameRng::default())
+        .add_plugin(HookPlugin);
 
     app.add_plugin(GameUI)
         .add_plugin(EnemiesPlugin)
@@ -101,7 +105,7 @@ fn main() {
     app.run();
 }
 
-#[derive(Deref, DerefMut)]
+#[derive(Resource, Deref, DerefMut)]
 pub struct GameRng(pub Pcg32);
 
 impl Default for GameRng {
@@ -123,7 +127,7 @@ fn setup_level(
 ) {
     // com.insert_resource(DefaultPluginState::<MyRaycastSet>::default().with_debug_cursor());
     // plane
-    com.spawn_bundle(PbrBundle {
+    com.spawn(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Plane { size: 24.0 })),
         material: materials.add(StandardMaterial {
             base_color: Color::rgb(0.2, 0.2, 0.2),
@@ -133,16 +137,16 @@ fn setup_level(
         ..default()
     })
     .insert(Board)
-    .insert(RayCastMesh::<MyRaycastSet>::default());
+    .insert(RaycastMesh::<MyRaycastSet>::default());
 
-    com.spawn_bundle(SceneBundle {
+    com.spawn(SceneBundle {
         scene: model_assets.board.clone(),
         transform: Transform::from_translation(vec3(0.0, -0.1, 0.0)),
         ..default()
     });
 
     // light
-    com.spawn_bundle(DirectionalLightBundle {
+    com.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             illuminance: 20000.0,
             //shadows_enabled: true,
@@ -156,7 +160,7 @@ fn setup_level(
     });
     let side = 3.0;
     // camera
-    com.spawn_bundle(Camera3dBundle {
+    com.spawn(Camera3dBundle {
         transform: (Transform::from_translation(vec3(48.0 + side, 48.0, 48.0 - side)))
             .looking_at(vec3(side, -2.0, -side), Vec3::Y),
         projection: Projection::Perspective(PerspectiveProjection {
@@ -165,14 +169,14 @@ fn setup_level(
         }),
         ..default()
     })
-    .insert(RayCastSource::<MyRaycastSet>::new());
+    .insert(RaycastSource::<MyRaycastSet>::new());
 
     // Main Base
     spawn_main_base(&mut com, &model_assets, &b);
 }
 
 fn spawn_main_base(com: &mut Commands, model_assets: &ModelAssets, b: &GameBoard) {
-    let mut ecmds = com.spawn();
+    let mut ecmds = com.spawn_empty();
     ecmds.insert(MainBase);
     basic_light(
         &mut ecmds,
@@ -183,7 +187,7 @@ fn spawn_main_base(com: &mut Commands, model_assets: &ModelAssets, b: &GameBoard
         vec3(0.0, 2.0, 0.0),
     );
 
-    ecmds.insert_bundle(HookedSceneBundle {
+    ecmds.insert(HookedSceneBundle {
         scene: SceneBundle {
             scene: model_assets.base.clone(),
             transform: Transform::from_translation(b.ls_to_ws_vec3(b.dest)),
@@ -209,7 +213,7 @@ fn destroy_base_disable_turrets(
     if let Some((main_base_entity, main_base_trans)) = main_base.iter().next() {
         if player.health < 0.0 {
             com.entity(main_base_entity).despawn_recursive();
-            com.spawn_bundle(HookedSceneBundle {
+            com.spawn(HookedSceneBundle {
                 scene: SceneBundle {
                     scene: model_assets.base_destroyed.clone(),
                     transform: *main_base_trans,
@@ -225,7 +229,7 @@ fn destroy_base_disable_turrets(
     }
 }
 
-#[derive(Deref, DerefMut, Default)]
+#[derive(Resource, Deref, DerefMut, Default)]
 pub struct RestartGame(bool);
 
 fn restart_game(
@@ -279,7 +283,7 @@ pub fn basic_light(
     trans: Vec3,
 ) {
     cmds.add_children(|parent| {
-        parent.spawn_bundle(PointLightBundle {
+        parent.spawn(PointLightBundle {
             point_light: PointLight {
                 color,
                 intensity,

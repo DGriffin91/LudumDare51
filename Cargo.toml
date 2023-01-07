@@ -5,21 +5,21 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-bevy = { version = "0.8", features = [
+bevy = { version = "0.9", features = [
   "flac",
   "vorbis",
 ] }
-bevy_asset_loader = { version = "0.12", features = ["stageless"] }
-bevy_kira_audio = { version = "0.12", features = ["flac"] }
-bevy_egui = "0.16"
-bevy-web-resizer = "3.0"
-pathfinding = "3.0"
-bevy_mod_raycast = "0.6"
-iyes_loopless = "0.7"
-bevy-scene-hook = "4.0"
+bevy_asset_loader = { version = "0.14", features = ["stageless"] }
+bevy_kira_audio = { version = "0.13", features = ["flac"] }
+bevy_egui = "0.18"
+bevy-web-resizer = "4.0"
+pathfinding = "4.2"
+bevy_mod_raycast = "0.7"
+iyes_loopless = "0.9"
+bevy-scene-hook = "5.0"
 rand = "0.8"
 rand_pcg = "0.3"
-bevy_system_graph = "0.3"
+bevy_system_graph = "0.4"
 rkyv = { version = "0.7", features = ["validation"] }
 bytecheck = "0.6"
 lz4_flex = "0.9"

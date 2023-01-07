@@ -2,13 +2,13 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
 
-#[derive(AssetCollection)]
+#[derive(Resource, AssetCollection)]
 pub struct FontAssets {
     #[asset(path = "fonts/ShareTechMono-Regular.ttf")]
     pub mono_medium: Handle<Font>,
 }
 
-#[derive(AssetCollection)]
+#[derive(Resource, AssetCollection)]
 pub struct ModelAssets {
     // --- Units ---
     #[asset(path = "models/units/laser.glb#Scene0")]
@@ -41,7 +41,7 @@ pub struct ModelAssets {
     pub board: Handle<Scene>,
 }
 
-#[derive(AssetCollection)]
+#[derive(Resource, AssetCollection)]
 pub struct AudioAssets {
     // --- Units ---
     #[asset(path = "audio/units/laser1.flac")]
@@ -81,3 +81,70 @@ pub struct AudioAssets {
     #[asset(path = "audio/music/music.ogg")]
     pub music: Handle<AudioSource>,
 }
+
+/*
+TODO game in 0.9 looks different than in 0.8
+There was an issue with a clipping plane in board.glb that has been fixed, but it still looks different.
+Things like the 2nd ground unit looked more orange before.
+https://github.com/bevyengine/bevy/pull/6828 will mess with this again with 0.10
+The fix below isn't the right one, but may be a starting place to find the right fix.
+
+#[inline]
+fn linear_to_nonlinear_srgb(x: f32) -> f32 {
+    if x <= 0.0 {
+        return x;
+    }
+
+    if x <= 0.0031308 {
+        x * 12.92 // linear falloff in dark values
+    } else {
+        (1.055 * x.powf(1.0 / 2.4)) - 0.055 // gamma curve in other area
+    }
+}
+
+
+#[inline]
+fn nonlinear_to_linear_srgb(x: f32) -> f32 {
+    if x <= 0.0 {
+        return x;
+    }
+    if x <= 0.04045 {
+        x / 12.92 // linear falloff in dark values
+    } else {
+        ((x + 0.055) / 1.055).powf(2.4) // gamma curve in other area
+    }
+}
+
+pub fn fix_material_colors(
+    mut events: EventReader<AssetEvent<StandardMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for event in events.iter() {
+        match event {
+            AssetEvent::Created { handle } => {
+                if let Some(mut mat) = materials.get_mut(handle) {
+                    dbg!(mat.base_color);
+                    let c: Vec4 = mat.base_color.into();
+                    mat.base_color = Color::rgba(
+                        nonlinear_to_linear_srgb(c.x),
+                        nonlinear_to_linear_srgb(c.y),
+                        nonlinear_to_linear_srgb(c.z),
+                        nonlinear_to_linear_srgb(c.w),
+                    );
+                    dbg!(mat.base_color);
+                    let c: Vec4 = mat.emissive.into();
+                    mat.emissive = Color::rgba(
+                        nonlinear_to_linear_srgb(c.x),
+                        nonlinear_to_linear_srgb(c.y),
+                        nonlinear_to_linear_srgb(c.z),
+                        nonlinear_to_linear_srgb(c.w),
+                    );
+                }
+            }
+            AssetEvent::Modified { .. } => (),
+            AssetEvent::Removed { .. } => (),
+        }
+    }
+}
+
+*/

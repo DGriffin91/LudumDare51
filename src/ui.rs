@@ -66,7 +66,7 @@ fn ui_sidebar(
     let window = windows.get_primary_mut().unwrap();
     let my_frame = egui::containers::Frame {
         fill: Color32::from_rgba_unmultiplied(0, 0, 0, 64),
-        stroke: egui::Stroke::new(0.0, Color32::BLACK),
+        stroke: egui::Stroke::NONE,
         ..default()
     };
 
@@ -75,6 +75,7 @@ fn ui_sidebar(
         .resizable(false)
         .min_width(window.width() * 0.17)
         .default_width(window.width() * 0.17)
+        .show_separator_line(false)
         .show(egui_context.ctx_mut(), |ui| {
             let mut style = ui.style_mut();
             style.visuals.override_text_color = Some(Color32::from_rgb(94, 255, 169));
@@ -238,6 +239,7 @@ pub fn setup_fonts(mut egui_context: ResMut<EguiContext>) {
     egui_context.ctx_mut().set_fonts(fonts);
 }
 
+#[derive(Resource)]
 pub struct Preferences {
     pub less_lights: bool,
     pub light_r: f32, //light range mult

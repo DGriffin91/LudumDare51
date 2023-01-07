@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::{math::*, prelude::*};
 use iyes_loopless::{
-    prelude::FixedTimestepInfo,
+    prelude::FixedTimesteps,
     state::{CurrentState, NextState},
 };
 use rkyv::{Archive, Deserialize, Serialize};
@@ -22,7 +22,7 @@ pub fn process_actions(
     model_assets: Res<ModelAssets>,
     mut b: ResMut<GameBoard>,
     pref: Res<Preferences>,
-    mut time_step_info: ResMut<FixedTimestepInfo>,
+    mut time_step_info: ResMut<FixedTimesteps>,
     paused_state: Res<CurrentState<PausedState>>,
     mut game_recorder: ResMut<GameRecorder>,
 ) {
@@ -89,12 +89,12 @@ pub fn process_actions(
             }
             Action::GameSpeedDec => {
                 player.time_multiplier = (player.time_multiplier - 0.1).max(0.1);
-                time_step_info.step =
+                time_step_info.single_mut().step =
                     Duration::from_millis((TIMESTEP_MILLI as f64 / player.time_multiplier) as u64)
             }
             Action::GameSpeedInc => {
                 player.time_multiplier = (player.time_multiplier + 0.1).min(10.0);
-                time_step_info.step =
+                time_step_info.single_mut().step =
                     Duration::from_millis((TIMESTEP_MILLI as f64 / player.time_multiplier) as u64)
             }
             Action::GamePause => {
@@ -185,7 +185,7 @@ pub fn process_actions(
 #[archive_attr(derive(CheckBytes))]
 pub struct ActionRecording(Vec<(u32, [u8; 3])>);
 
-#[derive(Default)]
+#[derive(Resource, Default)]
 pub struct GameRecorder {
     pub actions: ActionRecording,
     pub disable_rec: bool,
@@ -193,7 +193,7 @@ pub struct GameRecorder {
     pub play_head: usize,
 }
 
-#[derive(Deref, DerefMut, Default)]
+#[derive(Resource, Deref, DerefMut, Default)]
 pub struct ActionQueue(pub Vec<Action>);
 
 #[derive(Archive, Deserialize, Serialize, Clone, Copy, Eq, PartialEq, Debug)]

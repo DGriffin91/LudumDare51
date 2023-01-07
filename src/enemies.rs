@@ -42,7 +42,7 @@ pub struct FlyingEnemy {
     new_rand_loc_timer: f32,
 }
 
-#[derive(Default)]
+#[derive(Resource, Default)]
 pub struct LastSpawns {
     rolling_enemy: f32,
     rolling_enemy2: f32,
@@ -73,7 +73,7 @@ pub(crate) fn spawn_rolling_enemy(
             .max(GAMESETTINGS.rolling_enemy_max_spawn_speed)
     {
         last_spawns.rolling_enemy = since_startup;
-        let mut ecmds = com.spawn();
+        let mut ecmds = com.spawn_empty();
 
         ecmds
             .insert(EnemyPath::default())
@@ -93,7 +93,7 @@ pub(crate) fn spawn_rolling_enemy(
             vec3(0.0, 0.4, -0.5),
         );
 
-        ecmds.insert_bundle(HookedSceneBundle {
+        ecmds.insert(HookedSceneBundle {
             scene: SceneBundle {
                 scene: model_assets.rolling_enemy.clone(),
                 transform: Transform::from_translation(b.ls_to_ws_vec3(b.start)),
@@ -127,7 +127,7 @@ pub(crate) fn spawn_rolling_enemy2(
             .max(GAMESETTINGS.rolling_enemy_2_max_spawn_speed)
     {
         last_spawns.rolling_enemy2 = since_startup;
-        let mut ecmds = com.spawn();
+        let mut ecmds = com.spawn_empty();
 
         ecmds
             .insert(EnemyPath::default())
@@ -147,7 +147,7 @@ pub(crate) fn spawn_rolling_enemy2(
             vec3(0.0, 0.4, -0.5),
         );
 
-        ecmds.insert_bundle(HookedSceneBundle {
+        ecmds.insert(HookedSceneBundle {
             scene: SceneBundle {
                 scene: model_assets.rolling_enemy_2.clone(),
                 transform: Transform::from_translation(b.ls_to_ws_vec3(b.start)),
@@ -183,7 +183,7 @@ pub(crate) fn spawn_flying_enemy(
         .max(GAMESETTINGS.flying_enemy_max_spawn_speed)
     {
         last_spawns.flying_enemy = since_startup;
-        let mut ecmds = com.spawn();
+        let mut ecmds = com.spawn_empty();
 
         ecmds
             .insert(Health(
@@ -213,7 +213,7 @@ pub(crate) fn spawn_flying_enemy(
             rng.gen_range(-15.0..-5.0) as f32,
         );
 
-        ecmds.insert_bundle(HookedSceneBundle {
+        ecmds.insert(HookedSceneBundle {
             scene: SceneBundle {
                 scene: model_assets.flying_enemy.clone(),
                 transform: Transform::from_translation(
@@ -315,7 +315,7 @@ pub(crate) fn debug_show_enemy_path(
     if let Some((_, enemy_path)) = enemies.iter().next() {
         for path in &enemy_path.path {
             for p in &path.0 {
-                com.spawn_bundle(PbrBundle {
+                com.spawn(PbrBundle {
                     mesh: meshes.add(Mesh::from(shape::UVSphere {
                         radius: 0.5,
                         ..default()
@@ -363,7 +363,7 @@ pub(crate) fn check_enemy_at_dest(
         if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 1.0 {
             player.health -= 0.1;
             com.entity(enemy_entity).despawn_recursive();
-            let mut ecmds = com.spawn_bundle(SceneBundle {
+            let mut ecmds = com.spawn(SceneBundle {
                 scene: model_assets.disc.clone(),
                 transform: Transform::from_translation(enemy_trans.translation + Vec3::Y * 0.5),
                 ..Default::default()
@@ -406,7 +406,7 @@ pub(crate) fn check_flying_enemy_at_dest(
         if enemy_trans.translation.distance(b.ls_to_ws_vec3(b.dest)) < 0.5 {
             player.health -= 0.05;
             com.entity(enemy_entity).despawn_recursive();
-            let mut ecmds = com.spawn_bundle(SceneBundle {
+            let mut ecmds = com.spawn(SceneBundle {
                 scene: model_assets.disc.clone(),
                 transform: Transform::from_translation(enemy_trans.translation + Vec3::Y * 0.5),
                 ..Default::default()

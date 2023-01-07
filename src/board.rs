@@ -9,6 +9,7 @@ pub struct Cell {
     pub turret: Option<(Turret, Entity)>,
 }
 
+#[derive(Resource)]
 pub struct GameBoard {
     pub size: [usize; 2],
     pub position: IVec2,

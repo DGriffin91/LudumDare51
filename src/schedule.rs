@@ -100,7 +100,7 @@ pub(crate) fn setup_schedule(app: &mut bevy::prelude::App) {
     app.add_stage_after(
         CoreStage::Update,
         "my_fixed_update",
-        FixedTimestepStage::new(Duration::from_millis(TIMESTEP_MILLI))
+        FixedTimestepStage::new(Duration::from_millis(TIMESTEP_MILLI), "main")
             .with_stage(fixed_update_stage),
     );
 }

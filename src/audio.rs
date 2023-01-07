@@ -8,10 +8,10 @@ use crate::{assets::AudioAssets, ui::Preferences, GameRng, GameState};
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
-#[derive(Default)]
+#[derive(Resource, Default)]
 pub struct ConLaserAudioHandle(pub Option<Handle<AudioInstance>>);
 
-#[derive(Default)]
+#[derive(Resource, Default)]
 pub struct MusicAudioHandle(pub Option<Handle<AudioInstance>>);
 
 pub struct GameAudioPlugin;
@@ -45,7 +45,7 @@ pub const EXPLOSION_SOUND: u8 = 1 << 5;
 const SFX_OFFSET: f64 = 0.25;
 const MUSIC_OFFSET: f64 = 0.15;
 
-#[derive(Default, Debug, Deref, DerefMut)]
+#[derive(Resource, Default, Debug, Deref, DerefMut)]
 pub struct AudioEvents(pub u8);
 
 fn setup_audio(
